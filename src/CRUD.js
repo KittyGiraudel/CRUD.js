@@ -36,6 +36,41 @@
   };
 
   /**
+   * Dissociate indexed from unindexed keys from an object
+   * @param   {Object} obj - object to parse
+   * @returns {Array}      - array of indexed keys and unindexed keys
+   */
+  Database.prototype.getKeys = function ( obj ) {
+    var keys = [
+      {}, // indexed properties
+      {}  // unindexed properties
+    ], index;
+
+    for(var property in obj) {
+      index = this.conf.indexedKeys.indexOf(property) !== -1 ? 0 : 1;
+      keys[index][property] = obj[property];
+    }
+
+    return keys;
+  };
+
+  /**
+   * Retrieve entries from unique keys
+   * @param   {Array} collection - array of unique keys
+   * @returns {Array}            - array of entries
+   */
+  Database.prototype.select = function ( collection ) {
+    var data = [];
+    collection = collection.length === 1 ? [collection] : collection;
+
+    for (var i = 0, len = collection.length; i < len; i++) {
+      data.push(this.conf.driver.getItem(collection[i]));
+    }
+
+    return data;
+  };
+
+  /**
    * Finding entries
    * @param   {Object} obj - the object of properties/values to look for
    * @returns {Array}      - collection of items matching the search
@@ -45,19 +80,13 @@
       return this.findAll();
     }
 
-    var entry, okay, collection,
-        unindexedKeys = [],
+    var keys = this.getKeys(obj),
         filtered = [],
-        data = [];
+        collection;
 
     // Dealing with indexed keys
-    for (var property in obj) {
-      if (this.conf.indexedKeys.indexOf(property) !== -1) {
-        // If key is indexed, proceed quick search
-        filtered.push(this.conf.driver.getItem(property + ':' + obj[property]) || false);
-      } else {
-        unindexedKeys.push(property);
-      }
+    for (var property in keys[0]) {
+      filtered.push(this.conf.driver.getItem(property + ':' + keys[0][property]) || false);
     }
 
     if (filtered.length === 0) {
@@ -69,15 +98,25 @@
     }
 
     // Retrieving entries from IDs
-    for (var i = 0; i < collection.length; i++) {
-      entry = this.conf.driver.getItem(collection[i]);
-      okay = true;
+    return this.filter(this.select(collection), keys[1]);
+  };
 
-      // Dealing with unindexed keys
-      // In case we are not searching for any unindexed key,
-      // this loop is simply ignored
-      for (var j = 0; j < unindexedKeys.length; j++) {
-        if (entry[unindexedKeys[j]] !== obj[unindexedKeys[j]]) {
+  /**
+   * Filtering a collection of entries based on unindexed keys
+   * @private
+   * @param   {Array} collection     - array of entries to search for
+   * @param   {Object} unindexedKeys - object of unindexed keys
+   * @returns {Array}                - array of entries
+   */
+  Database.prototype.filter = function ( collection, unindexedKeys ) {
+    var okay, entry, data = [];
+
+    for (var i = 0, len = collection.length; i < len; i++) {
+      okay = true;
+      entry = collection[i];
+
+      for (var property in unindexedKeys) {
+        if (entry[property] !== unindexedKeys[property]) {
           okay = false;
           break;
         }
@@ -96,11 +135,7 @@
    * @returns {Array} - collection of entries
    */
   Database.prototype.findAll = function () {
-    var data = [];
-    for (var i = 0, len = this.data.length; i < len; i++) {
-      data.push(this.conf.driver.getItem(this.data[i]));
-    }
-    return data;
+    return this.select(this.data);
   };
 
   /**
