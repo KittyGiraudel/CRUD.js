@@ -99,6 +99,6 @@ db.delete({ job: dev })
 
 ## To do
 
-[x] Improve the way I deal with `drop`
-[] Add `limit`, `sort` and other cool operations.
-[] I'd like to do something like MongoDB for the update. Not great for now.
+- [x] Improve the way I deal with `drop`
+- [ ] Add `limit`, `sort` and other cool operations.
+- [ ] I'd like to do something like MongoDB for the update. Not great for now.

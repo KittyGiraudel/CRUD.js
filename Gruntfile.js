@@ -18,7 +18,7 @@ module.exports = function(grunt) {
       },
       target: {
         files: {
-          'CRUD.min.js': ['src/helper.js', 'src/CRUD.js', 'src/StorageDriver.js']
+          'crud.min.js': 'src/*.js'
         }
       }
     },
@@ -40,7 +40,7 @@ module.exports = function(grunt) {
 
     watch: {
       uglify: {
-        files: ['src/CRUD.js', 'src/StorageDriver.js'],
+        files: 'src/*.js',
         tasks: ['uglify']
       },
       html: {

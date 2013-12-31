@@ -7,7 +7,11 @@
       storage: exports.localStorage
     }, conf || {});
 
-    if ( typeof conf.storage.getItem !== 'function' || typeof conf.storage.removeItem !== 'function' || typeof conf.storage.setItem !== 'function' ) {
+    if (
+      typeof conf.storage.getItem !== 'function' ||
+      typeof conf.storage.removeItem !== 'function' ||
+      typeof conf.storage.setItem !== 'function'
+    ) {
       throw 'Given Storage doesn\'t have methods `getItem`, `setItem` and `removeItem`.';
     }
   };
