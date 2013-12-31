@@ -45,43 +45,45 @@
       return this.findAll();
     }
 
-    var item, entry, okay, collection,
-        data = [],
+    var entry, okay, collection,
+        unindexedKeys = [],
         filtered = [],
-        unindexedKeys = [];
+        data = [];
 
     // Dealing with indexed keys
     for (var property in obj) {
       if (this.conf.indexedKeys.indexOf(property) !== -1) {
-        item = this.conf.driver.getItem(property + ':' + obj[property]);
-        filtered.push(item !== null ? item : false);
+        // If key is indexed, proceed quick search
+        filtered.push(this.conf.driver.getItem(property + ':' + obj[property]) || false);
       } else {
         unindexedKeys.push(property);
       }
     }
 
-    // Dealing with unindexed keys
     if (filtered.length === 0) {
       collection = this.data;
-    }
-    else if (filtered.length === 1) {
+    } else if (filtered.length === 1) {
       collection = filtered[0];
-    }
-    else {
+    } else {
       collection = intersect.apply(this, filtered);
     }
 
+    // Retrieving entries from IDs
     for (var i = 0; i < collection.length; i++) {
       entry = this.conf.driver.getItem(collection[i]);
       okay = true;
+
+      // Dealing with unindexed keys
+      // In case we are not searching for any unindexed key,
+      // this loop is simply ignored
       for (var j = 0; j < unindexedKeys.length; j++) {
-        if (entry[unindexedKeys] !== obj[unindexedKeys]) {
+        if (entry[unindexedKeys[j]] !== obj[unindexedKeys[j]]) {
           okay = false;
           break;
         }
       }
 
-      if(okay) {
+      if (okay) {
         data.push(entry);
       }
     }
