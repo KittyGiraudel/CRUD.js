@@ -1,0 +1,27 @@
+{
+  "name": "CRUD.js",
+  "version": "1.0.0",
+  "description": "A CRUD JavaScript class.",
+  "main": "CRUD.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HugoGiraudel/CRUD.js.git"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.1",
+    "grunt-cli": "~0.1.9",
+    "grunt-contrib-concat": "~0.3.0",
+    "grunt-contrib-uglify": "~0.2.0",
+    "grunt-contrib-watch": "~0.5.2",
+    "grunt-contrib-clean": "~0.5.0",
+    "grunt-contrib-jasmine": "~0.5.2",
+    "grunt-contrib-jshint": "~0.8",
+    "grunt-contrib-connect": "~0.5.0",
+    "grunt-template-jasmine-requirejs": "~0.1.6",
+    "grunt-template-jasmine-istanbul": "~0.2.5",
+    "open": "~0.0.4",
+    "argparse": "~0.1.15",
+    "underscore": "~1.5.2",
+    "glob": "~3.2.6"
+  }
+}
