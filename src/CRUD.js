@@ -36,15 +36,52 @@
   };
 
   /**
+   * Finding entries
+   * @param   {Object} obj - the object of properties/values to look for
+   * @returns {Array}      - collection of items matching the search
+   */
+  Database.prototype.find = function ( obj ) {
+    if (typeof obj === 'undefined') {
+      return this.findAll();
+    }
+
+    var keys = this.getKeys(obj),
+        filtered = [],
+        collection;
+
+    for (var property in keys[0]) {
+      filtered.push(this.conf.driver.getItem(property + ':' + keys[0][property]) || false);
+    }
+
+    if (filtered.length === 0) {
+      collection = this.data;
+    } else if (filtered.length === 1) {
+      collection = filtered[0];
+    } else {
+      collection = intersect.apply(this, filtered);
+    }
+
+    // Filtering by unindexed keys
+    return this.filter(this.select(collection), keys[1]);
+  };
+
+  /**
+   * Returning all entries from database
+   * @returns {Array} - collection of entries
+   */
+  Database.prototype.findAll = function () {
+    return this.select(this.data);
+  };
+
+  /**
    * Dissociate indexed from unindexed keys from an object
    * @param   {Object} obj - object to parse
    * @returns {Array}      - array of indexed keys and unindexed keys
    */
   Database.prototype.getKeys = function ( obj ) {
-    var keys = [
-      {}, // indexed properties
-      {}  // unindexed properties
-    ], index;
+    var index, keys = [];
+    keys[0] = {}; // indexed properties
+    keys[1] = {}; // unindexed properties
 
     for(var property in obj) {
       index = this.conf.indexedKeys.indexOf(property) !== -1 ? 0 : 1;
@@ -71,40 +108,9 @@
   };
 
   /**
-   * Finding entries
-   * @param   {Object} obj - the object of properties/values to look for
-   * @returns {Array}      - collection of items matching the search
-   */
-  Database.prototype.find = function ( obj ) {
-    if (typeof obj === 'undefined') {
-      return this.findAll();
-    }
-
-    var keys = this.getKeys(obj),
-        filtered = [],
-        collection;
-
-    // Dealing with indexed keys
-    for (var property in keys[0]) {
-      filtered.push(this.conf.driver.getItem(property + ':' + keys[0][property]) || false);
-    }
-
-    if (filtered.length === 0) {
-      collection = this.data;
-    } else if (filtered.length === 1) {
-      collection = filtered[0];
-    } else {
-      collection = intersect.apply(this, filtered);
-    }
-
-    // Retrieving entries from IDs
-    return this.filter(this.select(collection), keys[1]);
-  };
-
-  /**
    * Filtering a collection of entries based on unindexed keys
    * @private
-   * @param   {Array} collection     - array of entries to search for
+   * @param   {Array}  collection    - array of entries to search for
    * @param   {Object} unindexedKeys - object of unindexed keys
    * @returns {Array}                - array of entries
    */
@@ -112,8 +118,8 @@
     var okay, entry, data = [];
 
     for (var i = 0, len = collection.length; i < len; i++) {
-      okay = true;
       entry = collection[i];
+      okay = true;
 
       for (var property in unindexedKeys) {
         if (entry[property] !== unindexedKeys[property]) {
@@ -128,14 +134,6 @@
     }
 
     return data;
-  };
-
-  /**
-   * Returning all entries from database
-   * @returns {Array} - collection of entries
-   */
-  Database.prototype.findAll = function () {
-    return this.select(this.data);
   };
 
   /**
