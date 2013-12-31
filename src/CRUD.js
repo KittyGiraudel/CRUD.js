@@ -3,7 +3,11 @@
 (function( exports ) {
   'use strict';
 
-  // Constructor
+  /**
+   * Represents a database
+   * @constructor
+   * @param {Object} conf - the options to pass to the constructor
+   */
   var Database = function ( conf ) {
     this.conf = exports.extend({
       name: 'database',
@@ -18,8 +22,10 @@
     this.initialize();
   };
 
-  // [PRIVATE]
-  // Initialize
+  /**
+   * Initialization method
+   * @private
+   */
   Database.prototype.initialize = function () {
     this.data = this.load() || [];
     this.id = 0;
@@ -29,17 +35,21 @@
     }
   };
 
-  // Find entry
-  // Returns [array]
+  /**
+   * Finding entries
+   * @param   {Object} obj - the object of properties/values to look for
+   * @returns {Array}      - collection of items matching the search
+   */
   Database.prototype.find = function ( obj ) {
     if (typeof obj === 'undefined') {
       return this.findAll();
     }
 
-    var item, entry, okay,
+    var item, entry, okay, collection,
         data = [],
         filtered = [],
         unindexedKeys = [];
+
     // Dealing with indexed keys
     for (var property in obj) {
       if (this.conf.indexedKeys.indexOf(property) !== -1) {
@@ -51,7 +61,16 @@
     }
 
     // Dealing with unindexed keys
-    var collection = filtered.length === 0 ? this.data : filtered.length > 1 ? intersect.apply(this, collection) : filtered[0];
+    if (filtered.length === 0) {
+      collection = this.data;
+    }
+    else if (filtered.length === 1) {
+      collection = filtered[0];
+    }
+    else {
+      collection = intersect.apply(this, filtered);
+    }
+
     for (var i = 0; i < collection.length; i++) {
       entry = this.conf.driver.getItem(collection[i]);
       okay = true;
@@ -70,8 +89,10 @@
     return data;
   };
 
-  // Find all entries
-  // Returns [array]
+  /**
+   * Returning all entries from database
+   * @returns {Array} - collection of entries
+   */
   Database.prototype.findAll = function () {
     var data = [];
     for (var i = 0, len = this.data.length; i < len; i++) {
@@ -80,8 +101,11 @@
     return data;
   };
 
-  // Insert entry
-  // Returns [int] | undefined
+  /**
+   * Inserting an entry
+   * @param   {Object} obj - document to insert
+   * @returns {Number}     - unique key of the document
+   */
   Database.prototype.insert = function ( obj ) {
     if(Object.prototype.toString.call(obj) !== '[object Object]') {
       throw 'Can\'t insert ' + obj + '. Please insert object.';
@@ -92,24 +116,32 @@
       this.data.push(this.id);
       this.conf.driver.setItem(this.id, obj);
       this.conf.driver.setItem('__data', this.data.join(','));
-      this.buildIndex(this.id, obj);
+      this.buildIndex(obj);
       return this.id;
     }
   };
 
-  // Update entry by search / id
-  // Returns [object] | undefined
+  /**
+   * Updating an entry
+   * @param   {Number} id  - unique key of the document to update
+   * @param   {Object} obj - new entry
+   * @returns {Object}     - object (obj)
+   */
   Database.prototype.update = function ( id, obj ) {
     if (this.data.indexOf(id) !== -1) {
       this.destroyIndex(id); // First destroy existing index for object
+      obj[this.conf.uniqueKey] = id;
       this.conf.driver.setItem(id, obj); // Override object
-      this.buildIndex(id, obj); // Rebuild index
+      this.buildIndex(obj); // Rebuild index
       return obj;
     }
   };
 
-  // Delete entry by search / id
-  // Returns [boolean]
+  /**
+   * Deleting an entry
+   * @param  {Number|Object} arg - unique ID or object to look for before deleting matching entries
+   * @returns {Boolean}           - operation status
+   */
   Database.prototype.delete = function ( arg ) {
     // If passing an object, search and destroy
     if (Object.prototype.toString.call(arg) === '[object Object]') {
@@ -126,10 +158,14 @@
     }
   };
 
-  // [PRIVATE]
-  // Search then destroy
+  /**
+   * Find and delete
+   * @private
+   * @param   {Object}  obj - the object of properties/values to look for
+   * @returns {Boolean}     - operation status
+   */
   Database.prototype.findAndDelete = function ( obj ) {
-    var id, entries = this.find(obj);
+    var id, entries = this.find(obj), length = this.data.length;
     for(var i = 0; i < entries.length; i++) {
       id = entries[i][this.conf.uniqueKey];
       if (this.data.indexOf(id) !== -1) {
@@ -139,16 +175,21 @@
         this.conf.driver.setItem('__data', this.data.join(','));
       }
     }
+    return this.data.length < length;
   };
 
-  // Count number of entries
-  // Returns [integer]
+  /**
+   * Counting number of entries
+   * @returns {Number} - number of entries
+   */
   Database.prototype.count = function () {
     return this.data.length;
   };
 
-  // Drop database
-  // Returns [boolean]
+  /**
+   * Dropping the database
+   * @returns {Boolean} - operation status
+   */
   Database.prototype.drop = function () {
     for (var i = 0, len = this.data.length; i < len; i++) {
       this.delete(this.data[i]);
@@ -158,22 +199,30 @@
     return this.data.length === 0;
   };
 
-  // [PRIVATE]
-  // Load database
+  /**
+   * Loading entries from driver
+   * @private
+   * @returns {Array|null} - operation status
+   */
   Database.prototype.load = function () {
-    return this.conf.driver.getItem('__data') ? this.conf.driver.getItem('__data').split(',') : null;
+    return this.conf.driver.getItem('__data') ?
+      this.conf.driver.getItem('__data').split(',') :
+      null;
   };
 
-  // [PRIVATE]
-  // Building search index
-  Database.prototype.buildIndex = function ( id, obj ) {
-    var key, index, value = [id];
+  /**
+   * Building the index for an entry
+   * @private
+   * @param {Object} obj - entry to build index of
+   */
+  Database.prototype.buildIndex = function ( obj ) {
+    var key, index, value = [obj[this.conf.uniqueKey]];
     for (var property in obj) {
       if (this.conf.indexedKeys.indexOf(property) !== -1) {
         key = property + ':' + obj[property];
         index = this.conf.driver.getItem(key);
         if (index !== null) {
-          index.push(id);
+          index.push(obj[this.conf.uniqueKey]);
           value = index;
         }
         this.conf.driver.setItem(key, value);
@@ -181,8 +230,11 @@
     }
   };
 
-  // [PRIVATE]
-  // Destroying the search index
+  /**
+   * Destroying the index for a entry
+   * @private
+   * @param  {Number} id - unique key of entry to destroy index for
+   */
   Database.prototype.destroyIndex = function ( id ) {
     var key, index, item = this.conf.driver.getItem(id);
     if(item !== null) {
@@ -203,7 +255,11 @@
     }
   };
 
-  // [PRIVATE]
+  /**
+   * Intersecting multiple arrays
+   * @param  {Array} arguments - arrays to intersect
+   * @return {Array}           - intersection of given array
+   */
   var intersect = function () {
     var i, shortest, nShortest, n, len, ret = [], obj = {}, nOthers;
     nOthers = arguments.length - 1;
