@@ -251,9 +251,10 @@
    * @param {Object} obj - entry to build index of
    */
   Database.prototype.buildIndex = function ( obj ) {
-    var key, index, value = [obj[this.conf.uniqueKey]];
+    var key, index, value;
     for (var property in obj) {
       if (this.conf.indexedKeys.indexOf(property) !== -1) {
+        value = [obj[this.conf.uniqueKey]];
         key = property + ':' + obj[property];
         index = this.conf.driver.getItem(key);
         if (index !== null) {
