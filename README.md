@@ -1,5 +1,7 @@
 ## A CRUD JavaScript Class
 
+> Read [introduction article](davidwalsh.name/crud-javascript-class) on David Walsh's blog.
+
 Here is a [CRUD](http://en.wikipedia.org/wiki/Create,_read,_update_and_delete) JavaScript class mapping to the storage driver of your choice ([localStorage](https://developer.mozilla.org/en-US/docs/Web/Guide/API/DOM/Storage) in this demo). Before going any further, a couple of things you should note:
 
 **Each record has to be an object**. You can't store an array, a primitive or whatever; only objects. If you want to store &mdash; let's say &mdash; numbers you should wrap them into objects first; e.g. `{ value: 42 }`.
