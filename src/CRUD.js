@@ -273,20 +273,26 @@
    */
   Database.prototype.destroyIndex = function ( id ) {
     var key, index, item = this.conf.driver.getItem(id);
-    if(item !== null) {
-      for(var property in item) {
-        if(this.conf.indexedKeys.indexOf(property) !== -1) {
-          key = property + ':' + item[property];
-          index = this.conf.driver.getItem(key);
-          if (index !== null) {
-            index.splice(index.indexOf(id), 1);
-            if(index.length === 0) {
-              this.conf.driver.removeItem(key);
-            } else {
-              this.conf.driver.setItem(key, index);
-            }
-          }
-        }
+    if(item === null) {
+      return;
+    }
+
+    for(var property in item) {
+      if(this.conf.indexedKeys.indexOf(property) === -1) {
+        continue;
+      }
+
+      key = property + ':' + item[property];
+      index = this.conf.driver.getItem(key);
+      if (index === null) {
+        continue;
+      }
+
+      index.splice(index.indexOf(id), 1);
+      if(index.length === 0) {
+        this.conf.driver.removeItem(key);
+      } else {
+        this.conf.driver.setItem(key, index);
       }
     }
   };
