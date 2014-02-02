@@ -1,24 +1,38 @@
 module.exports = function(grunt) {
+  'use strict';
 
   var gruntConfig = {
     pkg: grunt.file.readJSON('package.json'),
 
     jshint: {
       all: [
-        'src/*.js'
+        'dist/CRUD.js'
       ],
       options: {
         jshintrc: '.jshintrc'
       }
     },
 
-    uglify: {
+    concat: {
       options: {
-        mangle: true
+        banner: '/*! <%= pkg.name %> - v<%= pkg.version %> - <%= grunt.template.today("yyyy-mm-dd") %> */\n',
       },
+      dist: {
+        src: [
+          'src/intro.js',
+          'src/helper.js',
+          'src/CRUD.js',
+          'src/StorageDriver.js',
+          'src/outro.js'
+        ],
+        dest: 'dist/CRUD.js'
+      }
+    },
+
+    uglify: {
       target: {
         files: {
-          'crud.min.js': 'src/*.js'
+          'dist/CRUD.min.js': 'dist/CRUD.js'
         }
       }
     },
@@ -41,7 +55,7 @@ module.exports = function(grunt) {
     watch: {
       uglify: {
         files: 'src/*.js',
-        tasks: ['uglify']
+        tasks: ['test']
       },
       html: {
         files: '*.html'
@@ -52,11 +66,15 @@ module.exports = function(grunt) {
 
   grunt.initConfig(gruntConfig);
 
+  grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-connect');
 
-  grunt.registerTask('test', ['jshint']);
-  grunt.registerTask('deploy', ['uglify']);
+
+  grunt.registerTask('build', ['concat', 'uglify']);
+
+  grunt.registerTask('test', ['build', 'jshint']);
+  grunt.registerTask('deploy', ['build']);
 };
