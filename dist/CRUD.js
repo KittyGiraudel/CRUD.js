@@ -1,6 +1,7 @@
-/*! CRUD.js - v1.0.0 - 2014-02-02 */
+/*! CRUD.js - v1.0.0 - 2014-02-03 */
 (function( exports, undefined ) {
   'use strict';
+  
 var extend = function( obj, extObj ) {
   obj = obj || {};
   if (arguments.length > 2) {
@@ -349,6 +350,8 @@ var intersect = function () {
 
 exports.Database = Database;
 exports.Database.drivers = {};
+
+
 var StorageDriver = function ( conf ) {
   this.conf = exports.extend({
     name: '',
