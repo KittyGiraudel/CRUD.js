@@ -1,6 +1,7 @@
 import storage from './storage.js';
 import StorageDriver from './StorageDriver.js';
 import intersect from 'intersect';
+import isObject from 'is-object';
 
 /**
  * Represents a database
@@ -127,7 +128,7 @@ class Database {
    * @returns {Number}     - unique key of the document
    */
   insert( obj ) {
-    if (typeof obj !== 'object' || obj === null) {
+    if (!isObject(obj)) {
       throw new Error('Can\'t insert ' + obj + '. Please insert object.');
     }
 
@@ -168,7 +169,7 @@ class Database {
    */
   delete( arg ) {
     // If passing an object, search and destroy
-    if (typeof arg === 'object' && arg !== null) {
+    if (isObject(arg)) {
       this.findAndDelete(arg);
     // If passing an id, destroy id
     } else if (this.data.includes(arg)) {
