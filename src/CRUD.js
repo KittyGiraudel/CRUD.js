@@ -43,11 +43,14 @@ class Database {
    * @returns {Array}      - collection of items matching the search
    */
   find (obj) {
+    // If no search object is being passed, search all entries
     if (typeof obj === 'undefined') {
       return this.findAll()
     }
 
+    // Grab the indexed and unindexed keys from search object
     const keys = this.getKeys(obj)
+
     let collection
     let filtered = Object.keys(keys.indexed).map(prop =>
       this.conf.driver.getItem(prop + ':' + keys.indexed[prop]) || false
@@ -220,6 +223,7 @@ class Database {
    */
   load () {
     let data = this.conf.driver.getItem('__data')
+
     return data ? data.split(',') : null
   }
 
@@ -230,18 +234,19 @@ class Database {
    */
   buildIndex (obj) {
     for (let property in obj) {
-      if (this.conf.indexedKeys.includes(property)) {
-        let value = [obj[this.conf.uniqueKey]]
-        let key = property + ':' + obj[property]
-        let index = this.conf.driver.getItem(key)
+      if (!this.conf.indexedKeys.includes(property)) continue
 
-        if (index !== null) {
-          index.push(obj[this.conf.uniqueKey])
-          value = index
-        }
+      let key = property + ':' + obj[property]
+      let index = this.conf.driver.getItem(key)
+      let value = [ obj[this.conf.uniqueKey] ]
 
-        this.conf.driver.setItem(key, value)
+      // If there is already 1 or more indexed values for this, append current
+      if (index !== null) {
+        index.push(obj[this.conf.uniqueKey])
+        value = index
       }
+
+      this.conf.driver.setItem(key, value)
     }
   }
 
