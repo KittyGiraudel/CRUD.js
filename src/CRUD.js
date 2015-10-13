@@ -188,16 +188,7 @@ class Database {
   findAndDelete (obj) {
     const length = this.data.length
 
-    this.find(obj).forEach(entry => {
-      let id = entry[this.conf.uniqueKey]
-
-      if (this.data.includes(id)) {
-        this.data.splice(this.data.indexOf(id), 1)
-        this.destroyIndex(id)
-        this.conf.driver.removeItem(id)
-        this.conf.driver.setItem('__data', this.data.join(','))
-      }
-    })
+    this.find(obj).forEach(entry => this.delete(entry[this.conf.uniqueKey]))
 
     return this.data.length < length
   }
