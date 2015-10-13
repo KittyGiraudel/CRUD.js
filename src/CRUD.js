@@ -49,7 +49,8 @@ Database.prototype.find = function ( obj ) {
   let collection;
 
   for (let property in keys.indexed) {
-    filtered.push(this.conf.driver.getItem(property + ':' + keys[0][property]) || false);
+    let key = property + ':' + keys.indexed[property];
+    filtered.push(this.conf.driver.getItem(key) || false);
   }
 
   if (filtered.length === 0) {
