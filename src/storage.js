@@ -1,13 +1,16 @@
-let data = {};
+/* global localStorage */
+let data = {}
 
 export default (typeof localStorage !== 'undefined') ? localStorage : {
   getItem: function (key) {
-    return data[key] || null;
+    return data[key] || null
   },
+
   setItem: function (key, value) {
-    data[key] = value;
+    data[key] = value
   },
+
   removeItem: function (key) {
-    delete data[key];
+    delete data[key]
   }
-};
+}
