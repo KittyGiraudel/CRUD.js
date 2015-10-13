@@ -1,5 +1,6 @@
-import { extend, intersect, storage } from './helpers.js';
+import storage from './storage.js';
 import StorageDriver from './StorageDriver.js';
+import intersect from 'intersect';
 
 /**
  * Represents a database
@@ -7,8 +8,8 @@ import StorageDriver from './StorageDriver.js';
  * @param {Object} conf - the options to pass to the constructor
  */
 class Database {
-  constructor( conf ) {
-    this.conf = extend({
+  constructor( conf = {} ) {
+    this.conf = Object.assign({
       name: 'database',
       indexedKeys: [],
       uniqueKey: 'id',
@@ -16,7 +17,7 @@ class Database {
         name: conf.name,
         storage: storage
       })
-    }, conf || {});
+    }, conf);
 
     this.initialize();
   }
@@ -30,8 +31,8 @@ class Database {
     this.id = 0;
 
     if (this.data.length > 0) {
-      this.data = this.data.map((e) => parseInt(e, 10));
-      this.id = Math.max.apply(Math, this.data);
+      this.data = this.data.map(Number);
+      this.id = Math.max(...this.data);
     }
   }
 
@@ -59,7 +60,7 @@ class Database {
     } else if (filtered.length === 1) {
       collection = filtered[0];
     } else {
-      collection = intersect.apply(this, filtered);
+      collection = intersect(...filtered);
     }
 
     // Filtering by unindexed keys
@@ -86,7 +87,7 @@ class Database {
     };
 
     for (let property in obj) {
-      let stack = this.conf.indexedKeys.indexOf(property) !== -1
+      let stack = this.conf.indexedKeys.includes(property)
           ? 'indexed'
           : 'unindexed';
 
@@ -102,9 +103,7 @@ class Database {
    * @returns {Array}            - array of entries
    */
   select( collection ) {
-    collection = !Array.isArray(collection) ? [collection] : collection;
-
-    return collection.map((item) => this.conf.driver.getItem(item));
+    return Array.from(collection).map(::this.conf.driver.getItem);
   }
 
   /**
@@ -115,15 +114,11 @@ class Database {
    * @returns {Array}                - array of entries
    */
   filter( collection, unindexedKeys ) {
-    return collection.map((entry) => {
-      for (let property in unindexedKeys) {
-        if (entry[property] !== unindexedKeys[property]) {
-          return false; 
-        }
-      }
-
-      return entry;
-    }).filter((entry) => entry);
+    return collection.filter(entry =>
+      Object.keys(unindexedKeys).every(prop =>
+        entry[prop] === unindexedKeys[prop]
+      )
+    )
   }
 
   /**
@@ -138,7 +133,7 @@ class Database {
 
     this.id++;
 
-    if (this.data.indexOf(this.id) === -1) {
+    if (this.data.includes(this.id)) {
       obj[this.conf.uniqueKey] = this.id;
       this.data.push(this.id);
       this.conf.driver.setItem(this.id, obj);
@@ -156,7 +151,7 @@ class Database {
    * @returns {Object}     - object (obj)
    */
   update( id, obj ) {
-    if (this.data.indexOf(id) !== -1) {
+    if (this.data.includes(id)) {
       this.destroyIndex(id); // First destroy existing index for object
       obj[this.conf.uniqueKey] = id;
       this.conf.driver.setItem(id, obj); // Override object
@@ -176,7 +171,7 @@ class Database {
     if (typeof arg === 'object' && arg !== null) {
       this.findAndDelete(arg);
     // If passing an id, destroy id
-    } else if (this.data.indexOf(arg) !== -1) {
+    } else if (this.data.includes(arg)) {
       this.data.splice(this.data.indexOf(arg), 1);
       this.destroyIndex(arg);
       this.conf.driver.removeItem(arg);
@@ -193,19 +188,18 @@ class Database {
    * @returns {Boolean}     - operation status
    */
   findAndDelete( obj ) {
-    const entries = this.find(obj);
     const length = this.data.length;
 
-    for (let i = 0; i < entries.length; i++) {
-      let id = entries[i][this.conf.uniqueKey];
+    this.find(obj).forEach(entry => {
+      let id = entry[this.conf.uniqueKey];
 
-      if (this.data.indexOf(id) !== -1) {
+      if (this.data.includes(id)) {
         this.data.splice(this.data.indexOf(id), 1);
         this.destroyIndex(id);
         this.conf.driver.removeItem(id);
         this.conf.driver.setItem('__data', this.data.join(','));
       }
-    }
+    });
 
     return this.data.length < length;
   }
@@ -223,7 +217,7 @@ class Database {
    * @returns {Boolean} - operation status
    */
   drop() {
-    this.data.forEach((item) => this.delete(item));
+    this.data.forEach(::this.delete);
     this.conf.driver.removeItem('__data');
     this.data.length = 0;
 
@@ -248,7 +242,7 @@ class Database {
    */
   buildIndex( obj ) {
     for (let property in obj) {
-      if (this.conf.indexedKeys.indexOf(property) !== -1) {
+      if (this.conf.indexedKeys.includes(property)) {
         let value = [obj[this.conf.uniqueKey]];
         let key = property + ':' + obj[property];
         let index = this.conf.driver.getItem(key);
@@ -276,7 +270,7 @@ class Database {
     }
 
     for (let property in item) {
-      if (this.conf.indexedKeys.indexOf(property) === -1) {
+      if (!this.conf.indexedKeys.includes(property)) {
         continue;
       }
 

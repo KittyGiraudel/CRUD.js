@@ -17,8 +17,8 @@
     "build": "src/*.js"
   },
   "scripts": {
-    "build": "browserify src/CRUD.js -t babelify --outfile dist/CRUD.js && uglifyjs dist/CRUD.js --compress --mangle --output dist/CRUD.min.js",
-    "watch": "node_modules/http-server/bin/http-server ./ & npm-watch",
+    "build": "browserify src/CRUD.js -t [ babelify --optional es7.functionBind ] | tee dist/CRUD.js | uglifyjs --compress --mangle > dist/CRUD.min.js",
+    "watch": "http-server ./ & npm-watch",
     "lint": "eslint src/*.js"
   }
 }

@@ -1,6 +1,6 @@
 class StorageDriver {
-  constructor( conf ) {
-    this.conf = conf || {};
+  constructor( conf = {} ) {
+    this.conf = conf;
 
     if (
       typeof this.conf.storage.getItem !== 'function' ||
