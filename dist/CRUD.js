@@ -1,34 +1,27 @@
-/*! CRUD.js - v1.0.0 - 2014-02-03 */
-(function( exports, undefined ) {
-  'use strict';
-  
-var extend = function( obj, extObj ) {
-  obj = obj || {};
-  if (arguments.length > 2) {
-    for (var a = 1; a < arguments.length; a++) {
-      window.extend(obj, arguments[a]);
-    }
-  } else {
-    for (var i in extObj) {
-      obj[i] = extObj[i];
-    }
-  }
-  return obj;
-};
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+'use strict';
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _helperJs = require('./helper.js');
+
+var _StorageDriverJs = require('./StorageDriver.js');
+
+var _StorageDriverJs2 = _interopRequireDefault(_StorageDriverJs);
 
 /**
  * Represents a database
  * @constructor
  * @param {Object} conf - the options to pass to the constructor
  */
-var Database = function ( conf ) {
-  this.conf = extend({
+var Database = function Database(conf) {
+  this.conf = (0, _helperJs.extend)({
     name: 'database',
     indexedKeys: [],
     uniqueKey: 'id',
-    driver: new Database.drivers.StorageDriver({
+    driver: new _StorageDriverJs2['default']({
       name: conf.name,
-      storage: exports.localStorage
+      storage: _helperJs.storage
     })
   }, conf || {});
 
@@ -42,8 +35,11 @@ var Database = function ( conf ) {
 Database.prototype.initialize = function () {
   this.data = this.load() || [];
   this.id = 0;
+
   if (this.data.length > 0) {
-    this.data = this.data.map(function(e) { return parseInt(e, 10); });
+    this.data = this.data.map(function (e) {
+      return parseInt(e, 10);
+    });
     this.id = Math.max.apply(Math, this.data);
   }
 };
@@ -53,16 +49,16 @@ Database.prototype.initialize = function () {
  * @param   {Object} obj - the object of properties/values to look for
  * @returns {Array}      - collection of items matching the search
  */
-Database.prototype.find = function ( obj ) {
+Database.prototype.find = function (obj) {
   if (typeof obj === 'undefined') {
     return this.findAll();
   }
 
-  var keys = this.getKeys(obj),
-      filtered = [],
-      collection;
+  var keys = this.getKeys(obj);
+  var filtered = [];
+  var collection = undefined;
 
-  for (var property in keys[0]) {
+  for (var property in keys.indexed) {
     filtered.push(this.conf.driver.getItem(property + ':' + keys[0][property]) || false);
   }
 
@@ -71,11 +67,11 @@ Database.prototype.find = function ( obj ) {
   } else if (filtered.length === 1) {
     collection = filtered[0];
   } else {
-    collection = intersect.apply(this, filtered);
+    collection = _helperJs.intersect.apply(this, filtered);
   }
 
   // Filtering by unindexed keys
-  return this.filter(this.select(collection), keys[1]);
+  return this.filter(this.select(collection), keys.unindexed);
 };
 
 /**
@@ -91,14 +87,16 @@ Database.prototype.findAll = function () {
  * @param   {Object} obj - object to parse
  * @returns {Array}      - array of indexed keys and unindexed keys
  */
-Database.prototype.getKeys = function ( obj ) {
-  var index, keys = [];
-  keys[0] = {}; // indexed properties
-  keys[1] = {}; // unindexed properties
+Database.prototype.getKeys = function (obj) {
+  var keys = {
+    indexed: {},
+    unindexed: {}
+  };
 
-  for(var property in obj) {
-    index = this.conf.indexedKeys.indexOf(property) !== -1 ? 0 : 1;
-    keys[index][property] = obj[property];
+  for (var property in obj) {
+    var stack = this.conf.indexedKeys.indexOf(property) !== -1 ? 'indexed' : 'unindexed';
+
+    keys[stack][property] = obj[property];
   }
 
   return keys;
@@ -109,15 +107,14 @@ Database.prototype.getKeys = function ( obj ) {
  * @param   {Array} collection - array of unique keys
  * @returns {Array}            - array of entries
  */
-Database.prototype.select = function ( collection ) {
-  var data = [];
-  collection = collection.length === 1 ? [collection] : collection;
+Database.prototype.select = function (collection) {
+  var _this = this;
 
-  for (var i = 0, len = collection.length; i < len; i++) {
-    data.push(this.conf.driver.getItem(collection[i]));
-  }
+  collection = !Array.isArray(collection) ? [collection] : collection;
 
-  return data;
+  return collection.map(function (item) {
+    return _this.conf.driver.getItem(item);
+  });
 };
 
 /**
@@ -127,26 +124,18 @@ Database.prototype.select = function ( collection ) {
  * @param   {Object} unindexedKeys - object of unindexed keys
  * @returns {Array}                - array of entries
  */
-Database.prototype.filter = function ( collection, unindexedKeys ) {
-  var okay, entry, data = [];
-
-  for (var i = 0, len = collection.length; i < len; i++) {
-    entry = collection[i];
-    okay = true;
-
+Database.prototype.filter = function (collection, unindexedKeys) {
+  return collection.map(function (entry) {
     for (var property in unindexedKeys) {
       if (entry[property] !== unindexedKeys[property]) {
-        okay = false;
-        break;
+        return false;
       }
     }
 
-    if (okay) {
-      data.push(entry);
-    }
-  }
-
-  return data;
+    return entry;
+  }).filter(function (entry) {
+    return entry;
+  });
 };
 
 /**
@@ -154,17 +143,20 @@ Database.prototype.filter = function ( collection, unindexedKeys ) {
  * @param   {Object} obj - document to insert
  * @returns {Number}     - unique key of the document
  */
-Database.prototype.insert = function ( obj ) {
-  if(Object.prototype.toString.call(obj) !== '[object Object]') {
-    throw 'Can\'t insert ' + obj + '. Please insert object.';
+Database.prototype.insert = function (obj) {
+  if (typeof obj !== 'object' || obj === null) {
+    throw new Error('Can\'t insert ' + obj + '. Please insert object.');
   }
+
   this.id++;
+
   if (this.data.indexOf(this.id) === -1) {
     obj[this.conf.uniqueKey] = this.id;
     this.data.push(this.id);
     this.conf.driver.setItem(this.id, obj);
     this.conf.driver.setItem('__data', this.data.join(','));
     this.buildIndex(obj);
+
     return this.id;
   }
 };
@@ -175,12 +167,13 @@ Database.prototype.insert = function ( obj ) {
  * @param   {Object} obj - new entry
  * @returns {Object}     - object (obj)
  */
-Database.prototype.update = function ( id, obj ) {
+Database.prototype.update = function (id, obj) {
   if (this.data.indexOf(id) !== -1) {
     this.destroyIndex(id); // First destroy existing index for object
     obj[this.conf.uniqueKey] = id;
     this.conf.driver.setItem(id, obj); // Override object
     this.buildIndex(obj); // Rebuild index
+
     return obj;
   }
 };
@@ -190,20 +183,19 @@ Database.prototype.update = function ( id, obj ) {
  * @param  {Number|Object} arg - unique ID or object to look for before deleting matching entries
  * @returns {Boolean}           - operation status
  */
-Database.prototype.delete = function ( arg ) {
+Database.prototype['delete'] = function (arg) {
   // If passing an object, search and destroy
-  if (Object.prototype.toString.call(arg) === '[object Object]') {
+  if (typeof arg === 'object' && arg !== null) {
     this.findAndDelete(arg);
-  // If passing an id, destroy id
-  } else {
-    if (this.data.indexOf(arg) !== -1) {
+    // If passing an id, destroy id
+  } else if (this.data.indexOf(arg) !== -1) {
       this.data.splice(this.data.indexOf(arg), 1);
       this.destroyIndex(arg);
       this.conf.driver.removeItem(arg);
       this.conf.driver.setItem('__data', this.data.join(','));
+
       return this.data.indexOf(arg) === -1;
     }
-  }
 };
 
 /**
@@ -212,10 +204,13 @@ Database.prototype.delete = function ( arg ) {
  * @param   {Object}  obj - the object of properties/values to look for
  * @returns {Boolean}     - operation status
  */
-Database.prototype.findAndDelete = function ( obj ) {
-  var id, entries = this.find(obj), length = this.data.length;
-  for(var i = 0; i < entries.length; i++) {
-    id = entries[i][this.conf.uniqueKey];
+Database.prototype.findAndDelete = function (obj) {
+  var entries = this.find(obj);
+  var length = this.data.length;
+
+  for (var i = 0; i < entries.length; i++) {
+    var id = entries[i][this.conf.uniqueKey];
+
     if (this.data.indexOf(id) !== -1) {
       this.data.splice(this.data.indexOf(id), 1);
       this.destroyIndex(id);
@@ -223,6 +218,7 @@ Database.prototype.findAndDelete = function ( obj ) {
       this.conf.driver.setItem('__data', this.data.join(','));
     }
   }
+
   return this.data.length < length;
 };
 
@@ -239,11 +235,14 @@ Database.prototype.count = function () {
  * @returns {Boolean} - operation status
  */
 Database.prototype.drop = function () {
-  for (var i = 0, len = this.data.length; i < len; i++) {
-    this.delete(this.data[i]);
-  }
+  var _this2 = this;
+
+  this.data.forEach(function (item) {
+    return _this2['delete'](item);
+  });
   this.conf.driver.removeItem('__data');
   this.data.length = 0;
+
   return this.data.length === 0;
 };
 
@@ -253,9 +252,7 @@ Database.prototype.drop = function () {
  * @returns {Array|null} - operation status
  */
 Database.prototype.load = function () {
-  return this.conf.driver.getItem('__data') ?
-    this.conf.driver.getItem('__data').split(',') :
-    null;
+  return this.conf.driver.getItem('__data') ? this.conf.driver.getItem('__data').split(',') : null;
 };
 
 /**
@@ -263,17 +260,18 @@ Database.prototype.load = function () {
  * @private
  * @param {Object} obj - entry to build index of
  */
-Database.prototype.buildIndex = function ( obj ) {
-  var key, index, value;
+Database.prototype.buildIndex = function (obj) {
   for (var property in obj) {
     if (this.conf.indexedKeys.indexOf(property) !== -1) {
-      value = [obj[this.conf.uniqueKey]];
-      key = property + ':' + obj[property];
-      index = this.conf.driver.getItem(key);
+      var value = [obj[this.conf.uniqueKey]];
+      var key = property + ':' + obj[property];
+      var index = this.conf.driver.getItem(key);
+
       if (index !== null) {
         index.push(obj[this.conf.uniqueKey]);
         value = index;
       }
+
       this.conf.driver.setItem(key, value);
     }
   }
@@ -284,25 +282,28 @@ Database.prototype.buildIndex = function ( obj ) {
  * @private
  * @param  {Number} id - unique key of entry to destroy index for
  */
-Database.prototype.destroyIndex = function ( id ) {
-  var key, index, item = this.conf.driver.getItem(id);
-  if(item === null) {
+Database.prototype.destroyIndex = function (id) {
+  var item = this.conf.driver.getItem(id);
+
+  if (item === null) {
     return;
   }
 
-  for(var property in item) {
-    if(this.conf.indexedKeys.indexOf(property) === -1) {
+  for (var property in item) {
+    if (this.conf.indexedKeys.indexOf(property) === -1) {
       continue;
     }
 
-    key = property + ':' + item[property];
-    index = this.conf.driver.getItem(key);
+    var key = property + ':' + item[property];
+    var index = this.conf.driver.getItem(key);
+
     if (index === null) {
       continue;
     }
 
     index.splice(index.indexOf(id), 1);
-    if(index.length === 0) {
+
+    if (index.length === 0) {
       this.conf.driver.removeItem(key);
     } else {
       this.conf.driver.setItem(key, index);
@@ -310,77 +311,110 @@ Database.prototype.destroyIndex = function ( id ) {
   }
 };
 
-/**
- * Intersecting multiple arrays
- * @param  {Array} arguments - arrays to intersect
- * @return {Array}           - intersection of given array
- */
-var intersect = function () {
-  var i, shortest, nShortest, n, len, ret = [], obj = {}, nOthers;
-  nOthers = arguments.length - 1;
-  nShortest = arguments[0].length;
-  shortest = 0;
-  for (i = 0; i <= nOthers; i++) {
-    n = arguments[i].length;
-    if (n < nShortest) {
-      shortest = i;
-      nShortest = n;
-    }
-  }
+module.exports = Database;
 
-  for (i = 0; i <= nOthers; i++) {
-    n = (i === shortest) ? 0 : (i || shortest);
-    len = arguments[n].length;
-    for (var j = 0; j < len; j++) {
-      var elem = arguments[n][j];
-      if (obj[elem] === i - 1) {
-        if (i === nOthers) {
-          ret.push(elem);
-          obj[elem] = 0;
-        } else {
-          obj[elem] = i;
-        }
-      } else if (i === 0) {
-        obj[elem] = 0;
-      }
-    }
-  }
-  return ret;
-};
+},{"./StorageDriver.js":2,"./helper.js":3}],2:[function(require,module,exports){
+'use strict';
 
-exports.Database = Database;
-exports.Database.drivers = {};
+var StorageDriver = function StorageDriver(conf) {
+  this.conf = conf || {};
 
-
-var StorageDriver = function ( conf ) {
-  this.conf = exports.extend({
-    name: '',
-    storage: exports.localStorage
-  }, conf || {});
-
-  if (
-    typeof conf.storage.getItem !== 'function' ||
-    typeof conf.storage.removeItem !== 'function' ||
-    typeof conf.storage.setItem !== 'function'
-  ) {
-    throw 'Given Storage doesn\'t have methods `getItem`, `setItem` and `removeItem`.';
+  if (typeof this.conf.storage.getItem !== 'function' || typeof this.conf.storage.removeItem !== 'function' || typeof this.conf.storage.setItem !== 'function') {
+    throw new Error('Given Storage doesn\'t have methods `getItem`, `setItem` and `removeItem`.');
   }
 };
 
-StorageDriver.prototype.setItem = function ( key, value ) {
+StorageDriver.prototype.setItem = function (key, value) {
   return this.conf.storage.setItem(this.conf.name + ':' + key, JSON.stringify(value));
 };
 
-StorageDriver.prototype.getItem = function ( key ) {
+StorageDriver.prototype.getItem = function (key) {
   return JSON.parse(this.conf.storage.getItem(this.conf.name + ':' + key));
 };
 
-StorageDriver.prototype.removeItem = function ( key ) {
+StorageDriver.prototype.removeItem = function (key) {
   return this.conf.storage.removeItem(this.conf.name + ':' + key);
 };
 
-if (exports.Database) {
-  exports.Database.drivers.StorageDriver = StorageDriver;
-}
+module.exports = StorageDriver;
 
-})(window);
+},{}],3:[function(require,module,exports){
+'use strict';
+
+module.exports = {
+  extend: function extend(obj, extObj) {
+    obj = obj || {};
+    if (arguments.length > 2) {
+      for (var a = 1; a < arguments.length; a++) {
+        window.extend(obj, arguments[a]);
+      }
+    } else {
+      for (var i in extObj) {
+        obj[i] = extObj[i];
+      }
+    }
+    return obj;
+  },
+
+  intersect: function intersect() {
+    var i,
+        shortest,
+        nShortest,
+        n,
+        len,
+        ret = [],
+        obj = {},
+        nOthers;
+    nOthers = arguments.length - 1;
+    nShortest = arguments[0].length;
+    shortest = 0;
+    for (i = 0; i <= nOthers; i++) {
+      n = arguments[i].length;
+      if (n < nShortest) {
+        shortest = i;
+        nShortest = n;
+      }
+    }
+
+    for (i = 0; i <= nOthers; i++) {
+      n = i === shortest ? 0 : i || shortest;
+      len = arguments[n].length;
+      for (var j = 0; j < len; j++) {
+        var elem = arguments[n][j];
+        if (obj[elem] === i - 1) {
+          if (i === nOthers) {
+            ret.push(elem);
+            obj[elem] = 0;
+          } else {
+            obj[elem] = i;
+          }
+        } else if (i === 0) {
+          obj[elem] = 0;
+        }
+      }
+    }
+    return ret;
+  },
+
+  storage: function storage() {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage;
+    }
+
+    var data = {};
+
+    return {
+      getItem: function getItem(key) {
+        return data[key] || null;
+      },
+      setItem: function setItem(key, value) {
+        data[key] = value;
+      },
+      removeItem: function removeItem(key) {
+        delete data[key];
+      }
+    };
+  }
+};
+
+},{}]},{},[1]);

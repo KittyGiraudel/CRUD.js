@@ -1,3 +1,6 @@
+import { extend, intersect, storage } from './helper.js';
+import StorageDriver from './StorageDriver.js';
+
 /**
  * Represents a database
  * @constructor
@@ -8,9 +11,9 @@ var Database = function ( conf ) {
     name: 'database',
     indexedKeys: [],
     uniqueKey: 'id',
-    driver: new Database.drivers.StorageDriver({
+    driver: new StorageDriver({
       name: conf.name,
-      storage: exports.localStorage
+      storage: storage
     })
   }, conf || {});
 
@@ -24,8 +27,9 @@ var Database = function ( conf ) {
 Database.prototype.initialize = function () {
   this.data = this.load() || [];
   this.id = 0;
+
   if (this.data.length > 0) {
-    this.data = this.data.map(function(e) { return parseInt(e, 10); });
+    this.data = this.data.map((e) => parseInt(e, 10));
     this.id = Math.max.apply(Math, this.data);
   }
 };
@@ -40,11 +44,11 @@ Database.prototype.find = function ( obj ) {
     return this.findAll();
   }
 
-  var keys = this.getKeys(obj),
-      filtered = [],
-      collection;
+  const keys = this.getKeys(obj);
+  let filtered = [];
+  let collection;
 
-  for (var property in keys[0]) {
+  for (let property in keys.indexed) {
     filtered.push(this.conf.driver.getItem(property + ':' + keys[0][property]) || false);
   }
 
@@ -57,7 +61,7 @@ Database.prototype.find = function ( obj ) {
   }
 
   // Filtering by unindexed keys
-  return this.filter(this.select(collection), keys[1]);
+  return this.filter(this.select(collection), keys.unindexed);
 };
 
 /**
@@ -74,13 +78,17 @@ Database.prototype.findAll = function () {
  * @returns {Array}      - array of indexed keys and unindexed keys
  */
 Database.prototype.getKeys = function ( obj ) {
-  var index, keys = [];
-  keys[0] = {}; // indexed properties
-  keys[1] = {}; // unindexed properties
+  let keys = {
+    indexed: {},
+    unindexed: {}
+  };
 
-  for(var property in obj) {
-    index = this.conf.indexedKeys.indexOf(property) !== -1 ? 0 : 1;
-    keys[index][property] = obj[property];
+  for (let property in obj) {
+    let stack = this.conf.indexedKeys.indexOf(property) !== -1
+        ? 'indexed'
+        : 'unindexed';
+
+    keys[stack][property] = obj[property];
   }
 
   return keys;
@@ -92,14 +100,9 @@ Database.prototype.getKeys = function ( obj ) {
  * @returns {Array}            - array of entries
  */
 Database.prototype.select = function ( collection ) {
-  var data = [];
-  collection = collection.length === 1 ? [collection] : collection;
+  collection = !Array.isArray(collection) ? [collection] : collection;
 
-  for (var i = 0, len = collection.length; i < len; i++) {
-    data.push(this.conf.driver.getItem(collection[i]));
-  }
-
-  return data;
+  return collection.map((item) => this.conf.driver.getItem(item));
 };
 
 /**
@@ -110,25 +113,15 @@ Database.prototype.select = function ( collection ) {
  * @returns {Array}                - array of entries
  */
 Database.prototype.filter = function ( collection, unindexedKeys ) {
-  var okay, entry, data = [];
-
-  for (var i = 0, len = collection.length; i < len; i++) {
-    entry = collection[i];
-    okay = true;
-
-    for (var property in unindexedKeys) {
+  return collection.map((entry) => {
+    for (let property in unindexedKeys) {
       if (entry[property] !== unindexedKeys[property]) {
-        okay = false;
-        break;
+        return false; 
       }
     }
 
-    if (okay) {
-      data.push(entry);
-    }
-  }
-
-  return data;
+    return entry;
+  }).filter((entry) => entry);
 };
 
 /**
@@ -137,16 +130,19 @@ Database.prototype.filter = function ( collection, unindexedKeys ) {
  * @returns {Number}     - unique key of the document
  */
 Database.prototype.insert = function ( obj ) {
-  if(Object.prototype.toString.call(obj) !== '[object Object]') {
-    throw 'Can\'t insert ' + obj + '. Please insert object.';
+  if (typeof obj !== 'object' || obj === null) {
+    throw new Error('Can\'t insert ' + obj + '. Please insert object.');
   }
+
   this.id++;
+
   if (this.data.indexOf(this.id) === -1) {
     obj[this.conf.uniqueKey] = this.id;
     this.data.push(this.id);
     this.conf.driver.setItem(this.id, obj);
     this.conf.driver.setItem('__data', this.data.join(','));
     this.buildIndex(obj);
+
     return this.id;
   }
 };
@@ -163,6 +159,7 @@ Database.prototype.update = function ( id, obj ) {
     obj[this.conf.uniqueKey] = id;
     this.conf.driver.setItem(id, obj); // Override object
     this.buildIndex(obj); // Rebuild index
+
     return obj;
   }
 };
@@ -174,17 +171,16 @@ Database.prototype.update = function ( id, obj ) {
  */
 Database.prototype.delete = function ( arg ) {
   // If passing an object, search and destroy
-  if (Object.prototype.toString.call(arg) === '[object Object]') {
+  if (typeof arg === 'object' && arg !== null) {
     this.findAndDelete(arg);
   // If passing an id, destroy id
-  } else {
-    if (this.data.indexOf(arg) !== -1) {
-      this.data.splice(this.data.indexOf(arg), 1);
-      this.destroyIndex(arg);
-      this.conf.driver.removeItem(arg);
-      this.conf.driver.setItem('__data', this.data.join(','));
-      return this.data.indexOf(arg) === -1;
-    }
+  } else if (this.data.indexOf(arg) !== -1) {
+    this.data.splice(this.data.indexOf(arg), 1);
+    this.destroyIndex(arg);
+    this.conf.driver.removeItem(arg);
+    this.conf.driver.setItem('__data', this.data.join(','));
+
+    return this.data.indexOf(arg) === -1;
   }
 };
 
@@ -195,9 +191,12 @@ Database.prototype.delete = function ( arg ) {
  * @returns {Boolean}     - operation status
  */
 Database.prototype.findAndDelete = function ( obj ) {
-  var id, entries = this.find(obj), length = this.data.length;
-  for(var i = 0; i < entries.length; i++) {
-    id = entries[i][this.conf.uniqueKey];
+  const entries = this.find(obj);
+  const length = this.data.length;
+
+  for (let i = 0; i < entries.length; i++) {
+    let id = entries[i][this.conf.uniqueKey];
+
     if (this.data.indexOf(id) !== -1) {
       this.data.splice(this.data.indexOf(id), 1);
       this.destroyIndex(id);
@@ -205,6 +204,7 @@ Database.prototype.findAndDelete = function ( obj ) {
       this.conf.driver.setItem('__data', this.data.join(','));
     }
   }
+
   return this.data.length < length;
 };
 
@@ -221,11 +221,10 @@ Database.prototype.count = function () {
  * @returns {Boolean} - operation status
  */
 Database.prototype.drop = function () {
-  for (var i = 0, len = this.data.length; i < len; i++) {
-    this.delete(this.data[i]);
-  }
+  this.data.forEach((item) => this.delete(item));
   this.conf.driver.removeItem('__data');
   this.data.length = 0;
+
   return this.data.length === 0;
 };
 
@@ -246,16 +245,17 @@ Database.prototype.load = function () {
  * @param {Object} obj - entry to build index of
  */
 Database.prototype.buildIndex = function ( obj ) {
-  var key, index, value;
-  for (var property in obj) {
+  for (let property in obj) {
     if (this.conf.indexedKeys.indexOf(property) !== -1) {
-      value = [obj[this.conf.uniqueKey]];
-      key = property + ':' + obj[property];
-      index = this.conf.driver.getItem(key);
+      let value = [obj[this.conf.uniqueKey]];
+      let key = property + ':' + obj[property];
+      let index = this.conf.driver.getItem(key);
+
       if (index !== null) {
         index.push(obj[this.conf.uniqueKey]);
         value = index;
       }
+
       this.conf.driver.setItem(key, value);
     }
   }
@@ -267,24 +267,27 @@ Database.prototype.buildIndex = function ( obj ) {
  * @param  {Number} id - unique key of entry to destroy index for
  */
 Database.prototype.destroyIndex = function ( id ) {
-  var key, index, item = this.conf.driver.getItem(id);
-  if(item === null) {
+  const item = this.conf.driver.getItem(id);
+
+  if (item === null) {
     return;
   }
 
-  for(var property in item) {
-    if(this.conf.indexedKeys.indexOf(property) === -1) {
+  for (let property in item) {
+    if (this.conf.indexedKeys.indexOf(property) === -1) {
       continue;
     }
 
-    key = property + ':' + item[property];
-    index = this.conf.driver.getItem(key);
+    let key = property + ':' + item[property];
+    let index = this.conf.driver.getItem(key);
+
     if (index === null) {
       continue;
     }
 
     index.splice(index.indexOf(id), 1);
-    if(index.length === 0) {
+
+    if (index.length === 0) {
       this.conf.driver.removeItem(key);
     } else {
       this.conf.driver.setItem(key, index);
@@ -292,44 +295,4 @@ Database.prototype.destroyIndex = function ( id ) {
   }
 };
 
-/**
- * Intersecting multiple arrays
- * @param  {Array} arguments - arrays to intersect
- * @return {Array}           - intersection of given array
- */
-var intersect = function () {
-  var i, shortest, nShortest, n, len, ret = [], obj = {}, nOthers;
-  nOthers = arguments.length - 1;
-  nShortest = arguments[0].length;
-  shortest = 0;
-  for (i = 0; i <= nOthers; i++) {
-    n = arguments[i].length;
-    if (n < nShortest) {
-      shortest = i;
-      nShortest = n;
-    }
-  }
-
-  for (i = 0; i <= nOthers; i++) {
-    n = (i === shortest) ? 0 : (i || shortest);
-    len = arguments[n].length;
-    for (var j = 0; j < len; j++) {
-      var elem = arguments[n][j];
-      if (obj[elem] === i - 1) {
-        if (i === nOthers) {
-          ret.push(elem);
-          obj[elem] = 0;
-        } else {
-          obj[elem] = i;
-        }
-      } else if (i === 0) {
-        obj[elem] = 0;
-      }
-    }
-  }
-  return ret;
-};
-
-exports.Database = Database;
-exports.Database.drivers = {};
-
+module.exports = Database;
