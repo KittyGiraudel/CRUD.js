@@ -131,7 +131,7 @@ class Database {
 
     this.id++
 
-    if (this.data.includes(this.id)) {
+    if (!this.data.includes(this.id)) {
       obj[this.conf.uniqueKey] = this.id
       this.data.push(this.id)
       this.conf.driver.setItem(this.id, obj)
