@@ -1,4 +1,4 @@
-import { extend, intersect, storage } from './helper.js';
+import { extend, intersect, storage } from './helpers.js';
 import StorageDriver from './StorageDriver.js';
 
 /**

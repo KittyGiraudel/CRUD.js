@@ -4,3 +4,4 @@ _SpecRunner.html
 node_modules
 output
 .git
+dist/CRUD.js
