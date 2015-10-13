@@ -1,7 +1,7 @@
-import storage from './storage.js'
-import StorageDriver from './StorageDriver.js'
 import intersect from 'intersect'
 import isObject from 'is-object'
+import storage from './storage.js'
+import StorageDriver from './StorageDriver.js'
 
 /**
  * Represents a database
@@ -126,7 +126,7 @@ class Database {
    */
   insert (obj) {
     if (!isObject(obj)) {
-      throw new Error('Can\'t insert ' + obj + '. Please insert object.')
+      throw new Error(`Can’t insert ${obj}. Please insert object.`)
     }
 
     this.id++
@@ -167,7 +167,7 @@ class Database {
   delete (arg) {
     // If passing an object, search and destroy
     if (isObject(arg)) {
-      this.findAndDelete(arg)
+      return this.findAndDelete(arg)
     // If passing an id, destroy id
     } else if (this.data.includes(arg)) {
       this.data.splice(this.data.indexOf(arg), 1)
@@ -228,9 +228,8 @@ class Database {
    * @returns {Array|null} - operation status
    */
   load () {
-    return this.conf.driver.getItem('__data')
-      ? this.conf.driver.getItem('__data').split(',')
-      : null
+    let data = this.conf.driver.getItem('__data')
+    return data ? data.split(',') : null
   }
 
   /**
@@ -263,21 +262,15 @@ class Database {
   destroyIndex (id) {
     const item = this.conf.driver.getItem(id)
 
-    if (item === null) {
-      return
-    }
+    if (item === null) return
 
     for (let property in item) {
-      if (!this.conf.indexedKeys.includes(property)) {
-        continue
-      }
+      if (!this.conf.indexedKeys.includes(property)) continue
 
       let key = property + ':' + item[property]
       let index = this.conf.driver.getItem(key)
 
-      if (index === null) {
-        continue
-      }
+      if (index === null) continue
 
       index.splice(index.indexOf(id), 1)
 
