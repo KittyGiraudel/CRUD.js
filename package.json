@@ -24,7 +24,7 @@
     "build": "browserify src/CRUD.js -t [ babelify --stage 0 ] | tee dist/CRUD.js | uglifyjs --compress --mangle > dist/CRUD.min.js",
     "watch": "npm-watch",
     "lint": "standard",
-    "test": "mocha ./test/**/*.js --require mocha-babel --reporter nyan"
+    "test": "mocha ./test/**/*.js --require mocha-babel"
   },
   "standard": {
     "parser": "babel-eslint"

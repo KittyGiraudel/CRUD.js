@@ -110,15 +110,13 @@ class Database {
   /**
    * Filtering a collection of entries based on unindexed keys
    * @private
-   * @param   {Array}  collection    - array of entries to search for
-   * @param   {Object} unindexedKeys - object of unindexed keys
-   * @returns {Array}                - array of entries
+   * @param   {Array}  collection - array of entries to search for
+   * @param   {Object} obj        - object of unindexed keys
+   * @returns {Array}             - array of entries
    */
-  filter (collection, unindexedKeys) {
+  filter (collection, obj) {
     return collection.filter(entry =>
-      Object.keys(unindexedKeys).every(prop =>
-        entry[prop] === unindexedKeys[prop]
-      )
+      Object.keys(obj).every(key => entry[key] === obj[key])
     )
   }
 
@@ -135,11 +133,13 @@ class Database {
     this.id++
 
     if (!this.data.includes(this.id)) {
-      obj[this.conf.uniqueKey] = this.id
+      let entry = Object.assign({}, obj, {
+        [this.conf.uniqueKey]: this.id
+      })
       this.data.push(this.id)
-      this.conf.driver.setItem(this.id, obj)
+      this.conf.driver.setItem(this.id, entry)
       this.conf.driver.setItem('__data', this.data.join(','))
-      this.buildIndex(obj)
+      this.buildIndex(entry)
 
       return this.id
     }
