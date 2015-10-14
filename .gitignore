@@ -1,7 +1,4 @@
-.sass-cache
-_SpecRunner.html
-.grunt
 node_modules
-output
 .git
 dist/CRUD.js
+npm-debug.log
