@@ -58,15 +58,15 @@ class Database {
       keys[stack][property] = obj[property]
     }
 
-    let filtered = Object.keys(keys.indexed).map(prop =>
+    let results = Object.keys(keys.indexed).map(prop =>
       this.conf.driver.getItem(prop + ':' + keys.indexed[prop]) || false
     )
 
-    let collection = filtered.length === 0
+    let collection = results.length === 0
       ? this._data
-      : filtered.length === 1
-        ? filtered
-        : intersect(...filtered)
+      : results.length === 1
+        ? results
+        : intersect(...results)
 
     // Filtering by unindexed keys
     return collection.map(::this.conf.driver.getItem).filter(entry =>
