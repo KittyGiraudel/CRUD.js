@@ -14,7 +14,7 @@ describe('Database initialisation', () => {
     assert(db.data.length === 0)
   })
 
-  it('should grab existing entries from storage if any', () => {
+  it('should load existing entries from storage if any', () => {
     let a = { foo: 'bar' }
     db.insert([a, a, a, a, a])
     db = new Database()

@@ -3,13 +3,13 @@ import isObject from 'is-object'
 import storage from './storage.js'
 import StorageDriver from './StorageDriver.js'
 
-/**
- * Represents a database
- * @constructor
- * @param {Object} conf - the options to pass to the constructor
- */
 class Database {
 
+  /**
+   * Represents a database
+   * @constructor
+   * @param {Object} conf - the options to pass to the constructor
+   */
   constructor (conf = {}) {
     this.conf = Object.assign({
       // Name of the database
@@ -58,6 +58,7 @@ class Database {
       keys[stack][property] = obj[property]
     }
 
+    // Speed search results
     let results = Object.keys(keys.indexed).map(prop =>
       this.conf.driver.getItem(prop + ':' + keys.indexed[prop])
     )
@@ -69,11 +70,12 @@ class Database {
         : intersect(...results)
 
     // Filtering by unindexed keys
-    return collection.map(this.conf.driver.getItem, this.conf.driver).filter(entry =>
-      Object.keys(keys.unindexed).every(key =>
-        entry[key] === keys.unindexed[key]
+    return collection
+      .map(this.conf.driver.getItem, this.conf.driver)
+      .filter(entry =>
+        Object.keys(keys.unindexed)
+          .every(key => entry[key] === keys.unindexed[key])
       )
-    )
   }
 
   /**
@@ -101,9 +103,7 @@ class Database {
     }
 
     // Clone object and assign it unique key
-    let entry = Object.assign({}, arg, {
-      [this.conf.uniqueKey]: this.id
-    })
+    let entry = this._addUniqueKey(arg, this.id)
 
     // Push object to data storage
     this.data.push(this.id)
@@ -127,9 +127,7 @@ class Database {
     // If there is an existing entry for `id`
     if (this.data.includes(id)) {
       // Clone object and assign it unique key
-      let entry = Object.assign({}, obj, {
-        [this.conf.uniqueKey]: id
-      })
+      let entry = this._addUniqueKey(obj, id)
 
       // First destroy existing index for object
       this._destroyIndex(id)
@@ -195,6 +193,16 @@ class Database {
   }
 
   /**
+   * Clone given object and add id as unique key to it
+   * @param {Object} obj - the object to add unique key to
+   * @param {Number} id  - id to add as unique key to object
+   * @returns {Object} - Cloned object with extra unique key
+   */
+  _addUniqueKey (obj, id) {
+    return Object.assign({}, obj, { [this.conf.uniqueKey]: id })
+  }
+
+  /**
    * Find and delete
    * @private
    * @param   {Object}  obj - the object of properties/values to look for
@@ -203,9 +211,7 @@ class Database {
   _findAndDelete (obj) {
     const length = this.data.length
 
-    this.find(obj).forEach(entry =>
-      this.delete(entry[this.conf.uniqueKey])
-    )
+    this.find(obj).forEach(entry => this.delete(entry[this.conf.uniqueKey]))
 
     return this.data.length < length
   }

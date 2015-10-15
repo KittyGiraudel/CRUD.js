@@ -5,7 +5,7 @@ import Database from '../src/CRUD.js'
 let db = new Database()
 
 describe('Database `count()` function', () => {
-  it('should be able to count the number of existing entries', () => {
+  it('should return the number of existing entries', () => {
     let count = db.count()
     db.insert({ foo: 'bar' })
 

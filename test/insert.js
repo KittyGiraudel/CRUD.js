@@ -5,7 +5,7 @@ import Database from '../src/CRUD.js'
 let db = new Database()
 
 describe('Database `insert()` function', () => {
-  it('should be able to insert new entries', () => {
+  it('should insert new entry when given an object', () => {
     let obj = { foo: 'bar' }
     let entry = db.insert(obj)
     let next = db.insert(obj)
@@ -16,7 +16,7 @@ describe('Database `insert()` function', () => {
     assert(next === 2)
   })
 
-  it('should insert several entries at once when passing an array', () => {
+  it('should insert several new entries at once when given an array', () => {
     let obj = { foo: 'bar' }
     db.drop()
     db.insert([obj, obj, obj])

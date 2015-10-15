@@ -5,7 +5,7 @@ import Database from '../src/CRUD.js'
 let db = new Database()
 
 describe('Database `update()` function', () => {
-  it('should be able to update an existing entry', () => {
+  it('should update an existing entry from given id and object', () => {
     let obj = { foo: 'bar' }
     let id = db.insert(obj)
     let entry = db.update(id, Object.assign(obj, { baz: 'qux' }))
