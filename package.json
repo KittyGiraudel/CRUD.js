@@ -19,7 +19,7 @@
   "scripts": {
     "build": "browserify src/CRUD.js -t [ babelify --stage 0 ] | tee dist/CRUD.js | uglifyjs --compress --mangle > dist/CRUD.min.js",
     "lint": "standard",
-    "test": "mocha ./test/**/*.js --require mocha-babel"
+    "test": "mocha ./test/**/*.js --compilers js:babel/register"
   },
   "standard": {
     "parser": "babel-eslint"

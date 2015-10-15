@@ -69,7 +69,7 @@ class Database {
         : intersect(...results)
 
     // Filtering by unindexed keys
-    return collection.map(::this.conf.driver.getItem).filter(entry =>
+    return collection.map(this.conf.driver.getItem, this.conf.driver).filter(entry =>
       Object.keys(keys.unindexed).every(key =>
         entry[key] === keys.unindexed[key]
       )
@@ -84,7 +84,7 @@ class Database {
   insert (arg) {
     // Go recursive if it is an array, inserting several entries at once
     if (Array.isArray(arg)) {
-      return arg.forEach(::this.insert)
+      return arg.forEach(this.insert, this)
     }
 
     // If it is not an object, throw an error as it is not storable
@@ -185,7 +185,7 @@ class Database {
    */
   drop () {
     // Remove all the entries from storage
-    this.data.forEach(::this.delete)
+    this.data.forEach(this.delete, this)
     // Remove the storage key altogether
     this.conf.driver.removeItem('__data')
     // Reset the length of data to 0
