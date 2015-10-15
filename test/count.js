@@ -11,6 +11,6 @@ describe('Database `count()` function', () => {
 
     assert(count === 0)
     assert(db.count() === 1)
-    assert(db.count() === db._data.length)
+    assert(db.count() === db.data.length)
   })
 })

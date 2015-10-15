@@ -9,7 +9,7 @@ describe('Database `delete()` function', () => {
     let a = { foo: 'bar' }
     let deletion = db.delete(db.insert(a))
 
-    assert(db._data.length === 0)
+    assert(db.data.length === 0)
     assert(db.find(a).length === 0)
     assert(deletion === true)
   })
@@ -19,7 +19,7 @@ describe('Database `delete()` function', () => {
     db.insert([a, a, a])
     let deletion = db.delete(a)
 
-    assert(db._data.length === 0)
+    assert(db.data.length === 0)
     assert(db.find(a).length === 0)
     assert(deletion === true)
   })

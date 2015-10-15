@@ -10,8 +10,8 @@ describe('Database initialisation', () => {
     assert(db.conf.name === 'database')
     assert(db.conf.uniqueKey === 'id')
     assert(db.conf.indexedKeys.length === 0)
-    assert(db._id === 0)
-    assert(db._data.length === 0)
+    assert(db.id === 0)
+    assert(db.data.length === 0)
   })
 
   it('should grab existing entries from storage if any', () => {
@@ -20,6 +20,6 @@ describe('Database initialisation', () => {
     db = new Database()
 
     assert(db.count() === 5)
-    assert(db._id === 5)
+    assert(db.id === 5)
   })
 })
