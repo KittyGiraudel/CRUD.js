@@ -16,10 +16,7 @@ describe('Database `delete()` function', () => {
 
   it('should be able to remove existing entries from object', () => {
     let a = { foo: 'bar' }
-    db.insert(a)
-    db.insert(a)
-    db.insert(a)
-
+    db.insert([a, a, a])
     let deletion = db.delete(a)
 
     assert(db._data.length === 0)

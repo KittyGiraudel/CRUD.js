@@ -16,13 +16,7 @@ describe('Database initialisation', () => {
 
   it('should grab existing entries from storage if any', () => {
     let a = { foo: 'bar' }
-
-    db.insert(a)
-    db.insert(a)
-    db.insert(a)
-    db.insert(a)
-    db.insert(a)
-
+    db.insert([a, a, a, a, a])
     db = new Database()
 
     assert(db.count() === 5)

@@ -16,9 +16,16 @@ describe('Database `insert()` function', () => {
     assert(next === 2)
   })
 
+  it('should insert several entries at once when passing an array', () => {
+    let obj = { foo: 'bar' }
+    db.drop()
+    db.insert([obj, obj, obj])
+
+    assert(db.count() === 3)
+  })
+
   it('should throw an error when trying to insert a non-object', () => {
     assert.throw(db.insert.bind(db, 42), Error, 'Can’t insert 42. Please insert object.')
-    assert.throw(db.insert.bind(db, [4, 2]), Error, 'Can’t insert 4,2. Please insert object.')
     assert.throw(db.insert.bind(db, true), Error, 'Can’t insert true. Please insert object.')
     assert.throw(db.insert.bind(db, null), Error, 'Can’t insert null. Please insert object.')
     assert.throw(db.insert.bind(db, undefined), Error, 'Can’t insert undefined. Please insert object.')

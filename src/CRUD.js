@@ -87,7 +87,11 @@ class Database {
    * @returns {Number}     - unique key of the document
    */
   insert (obj) {
-    if (!isObject(obj) || Array.isArray(obj)) {
+    if (Array.isArray(obj)) {
+      return obj.forEach(::this.insert)
+    }
+
+    if (!isObject(obj)) {
       throw new Error(`Can’t insert ${obj}. Please insert object.`)
     }
 
