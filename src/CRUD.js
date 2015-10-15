@@ -59,10 +59,10 @@ class Database {
     }
 
     let results = Object.keys(keys.indexed).map(prop =>
-      this.conf.driver.getItem(prop + ':' + keys.indexed[prop]) || false
+      this.conf.driver.getItem(prop + ':' + keys.indexed[prop])
     )
 
-    let collection = results.length === 0
+    let collection = !results.length
       ? this._data
       : results.length === 1
         ? results
@@ -78,16 +78,18 @@ class Database {
 
   /**
    * Inserting an entry
-   * @param   {Object} obj - document to insert
-   * @returns {Number}     - unique key of the document
+   * @param   {Array|Object} arg - entry or array of entries to insert
+   * @returns {Number}           - unique key of the document
    */
-  insert (obj) {
-    if (Array.isArray(obj)) {
-      return obj.forEach(::this.insert)
+  insert (arg) {
+    // Go recursive if it is an array, inserting several entries at once
+    if (Array.isArray(arg)) {
+      return arg.forEach(::this.insert)
     }
 
-    if (!isObject(obj)) {
-      throw new Error(`Can’t insert ${obj}. Please insert object.`)
+    // If it is not an object, throw an error as it is not storable
+    if (!isObject(arg)) {
+      throw new Error(`Can’t insert ${arg}. Please insert object.`)
     }
 
     // Bump up unique key
@@ -99,7 +101,7 @@ class Database {
     }
 
     // Clone object and assign it unique key
-    let entry = Object.assign({}, obj, {
+    let entry = Object.assign({}, arg, {
       [this.conf.uniqueKey]: this._id
     })
 
@@ -189,7 +191,7 @@ class Database {
     // Reset the length of data to 0
     this._data.length = 0
 
-    return this._data.length === 0
+    return !this._data.length
   }
 
   /**
@@ -238,7 +240,7 @@ class Database {
       let value = [ obj[this.conf.uniqueKey] ]
 
       // If there is already 1 or more indexed values for this, append current
-      if (index !== null) {
+      if (index) {
         index.push(obj[this.conf.uniqueKey])
         value = index
       }
@@ -258,7 +260,7 @@ class Database {
     const item = this.conf.driver.getItem(id)
 
     // If there is no entry, there is no index then abort
-    if (item === null) return
+    if (!item) return
 
     // For each property of entry
     for (let property in item) {
@@ -270,13 +272,13 @@ class Database {
       let index = this.conf.driver.getItem(key)
 
       // If there is no index, skip to next key
-      if (index === null) continue
+      if (!index) continue
 
       // Remove the entry id from the current index
       index.splice(index.indexOf(id), 1)
 
       // If the index is now empty, remove it from storage
-      if (index.length === 0) {
+      if (!index.length) {
         this.conf.driver.removeItem(key)
       // Else, update it in storage
       } else {
@@ -290,7 +292,7 @@ class Database {
    * @param  {String} message - message to display
    */
   _log (message) {
-    if (this.conf.verbose !== false && typeof console !== 'undefined') {
+    if (this.conf.verbose && console) {
       console.log(message)
     }
   }
