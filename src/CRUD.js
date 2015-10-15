@@ -9,6 +9,7 @@ import StorageDriver from './StorageDriver.js'
  * @param {Object} conf - the options to pass to the constructor
  */
 class Database {
+
   constructor (conf = {}) {
     this.conf = Object.assign({
       // Name of the database
@@ -34,16 +35,10 @@ class Database {
    * @private
    */
   _initialize () {
-    // Load existing entries or initialize and empty array
-    this._data = this._load() || []
-    // Set internal id to 0
-    this._id = 0
-
-    // If some entries have been loaded, set id to max index
-    if (this._data.length > 0) {
-      this._data = this._data.map(Number)
-      this._id = Math.max(...this._data)
-    }
+    // Load existing entries
+    this._data = this._load()
+    // Set internal id
+    this._id = Math.max(...this._data, 0)
   }
 
   /**
@@ -151,7 +146,7 @@ class Database {
   /**
    * Deleting an entry
    * @param  {Number|Object} arg - unique ID or object to look for before deleting matching entries
-   * @returns {Boolean}           - operation status
+   * @returns {Boolean}          - operation status
    */
   delete (arg) {
     // If passing an object, search and destroy
@@ -216,12 +211,12 @@ class Database {
   /**
    * Loading entries from driver
    * @private
-   * @returns {Array|null} - operation status
+   * @returns {Array} - operation status
    */
   _load () {
     let data = this.conf.driver.getItem('__data')
 
-    return data ? data.split(',') : null
+    return data ? data.split(',').map(Number) : []
   }
 
   /**
@@ -256,7 +251,7 @@ class Database {
   /**
    * Destroying the index for a entry
    * @private
-   * @param  {Number} id - unique key of entry to destroy index for
+   * @param {Number} id - unique key of entry to destroy index for
    */
   _destroyIndex (id) {
     // Grab the entry for the given id
@@ -290,11 +285,16 @@ class Database {
     }
   }
 
+  /**
+   * Internal logging helper
+   * @param  {String} message - message to display
+   */
   _log (message) {
     if (this.conf.verbose !== false && typeof console !== 'undefined') {
       console.log(message)
     }
   }
+
 }
 
 export default Database
