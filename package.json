@@ -13,17 +13,11 @@
     "babelify": "^6.3.0",
     "chai": "^3.3.0",
     "mocha": "^2.3.3",
-    "npm-watch": "0.0.1",
     "standard": "^5.3.1",
     "uglify-js": "^2.5.0"
   },
-  "watch": {
-    "build": "src/*.js",
-    "test": "./test/**/*.js"
-  },
   "scripts": {
     "build": "browserify src/CRUD.js -t [ babelify --stage 0 ] | tee dist/CRUD.js | uglifyjs --compress --mangle > dist/CRUD.min.js",
-    "watch": "npm-watch",
     "lint": "standard",
     "test": "mocha ./test/**/*.js --require mocha-babel"
   },
