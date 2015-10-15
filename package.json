@@ -18,7 +18,8 @@
     "uglify-js": "^2.5.0"
   },
   "watch": {
-    "build": "src/*.js"
+    "build": "src/*.js",
+    "test": "./test/**/*.js"
   },
   "scripts": {
     "build": "browserify src/CRUD.js -t [ babelify --stage 0 ] | tee dist/CRUD.js | uglifyjs --compress --mangle > dist/CRUD.min.js",
