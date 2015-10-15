@@ -17,11 +17,11 @@ describe('Database `insert()` function', () => {
   })
 
   it('should throw an error when trying to insert a non-object', () => {
-    assert.throw(db.insert.bind(db, 42), Error)
-    assert.throw(db.insert.bind(db, [4, 2]), Error)
-    assert.throw(db.insert.bind(db, true), Error)
-    assert.throw(db.insert.bind(db, null), Error)
-    assert.throw(db.insert.bind(db, undefined), Error)
-    assert.throw(db.insert.bind(db, 'Hello world'), Error)
+    assert.throw(db.insert.bind(db, 42), Error, 'Can’t insert 42. Please insert object.')
+    assert.throw(db.insert.bind(db, [4, 2]), Error, 'Can’t insert 4,2. Please insert object.')
+    assert.throw(db.insert.bind(db, true), Error, 'Can’t insert true. Please insert object.')
+    assert.throw(db.insert.bind(db, null), Error, 'Can’t insert null. Please insert object.')
+    assert.throw(db.insert.bind(db, undefined), Error, 'Can’t insert undefined. Please insert object.')
+    assert.throw(db.insert.bind(db, 'Hello world'), Error, 'Can’t insert Hello world. Please insert object.')
   })
 })

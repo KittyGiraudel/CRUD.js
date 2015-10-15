@@ -21,4 +21,9 @@ describe('Database `find()` function', () => {
     assert(findB.length === 2)
     assert(findB[1].foo === 'baz')
   })
+
+  it('should be able to return all existing entries when no argument is given', () => {
+    assert(db.find().length === 3)
+    assert(db.find()[0].foo === 'bar')
+  })
 })

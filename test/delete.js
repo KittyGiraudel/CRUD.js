@@ -9,7 +9,7 @@ describe('Database `delete()` function', () => {
     let a = { foo: 'bar' }
     let deletion = db.delete(db.insert(a))
 
-    assert(db.data.length === 0)
+    assert(db._data.length === 0)
     assert(db.find(a).length === 0)
     assert(deletion === true)
   })
@@ -21,13 +21,17 @@ describe('Database `delete()` function', () => {
     db.insert(a)
 
     let deletion = db.delete(a)
-    
-    assert(db.data.length === 0)
+
+    assert(db._data.length === 0)
     assert(db.find(a).length === 0)
     assert(deletion === true)
   })
 
   it('should do nothing when trying to remove a non-existing entry', () => {
     assert(typeof db.delete(42) === 'undefined')
+  })
+
+  it('should do nothing when passing an empty object', () => {
+    assert(db.delete({}) === false)
   })
 })
