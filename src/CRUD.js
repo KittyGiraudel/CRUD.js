@@ -100,7 +100,7 @@ class Database {
 
     // If it exists already (shouldn’t), abort
     if (this._data.includes(this._id)) {
-      return this._log(`Existing entry for ${id}. Aborting.`)
+      return this._log(`Existing entry for ${this._id}. Aborting.`)
     }
 
     // Clone object and assign it unique key
@@ -135,7 +135,7 @@ class Database {
       })
 
       // First destroy existing index for object
-      this._destroyIndex(id) 
+      this._destroyIndex(id)
       // Override object to data storage
       this.conf.driver.setItem(id, obj)
       // Rebuild index if necessary
@@ -206,7 +206,7 @@ class Database {
   _findAndDelete (obj) {
     const length = this._data.length
 
-    this.find(obj).forEach(entry => 
+    this.find(obj).forEach(entry =>
       this.delete(entry[this.conf.uniqueKey])
     )
 
@@ -290,7 +290,7 @@ class Database {
     }
   }
 
-  _log(message) {
+  _log (message) {
     if (this.conf.verbose !== false && typeof console !== 'undefined') {
       console.log(message)
     }

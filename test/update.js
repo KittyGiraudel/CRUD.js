@@ -8,8 +8,8 @@ describe('Database `update()` function', () => {
   it('should be able to update an existing entry', () => {
     let obj = { foo: 'bar' }
     let id = db.insert(obj)
-    let entry = db.update(id, Object.assign(obj, { baz: 'qux'}))
-    
+    let entry = db.update(id, Object.assign(obj, { baz: 'qux' }))
+
     assert(id === entry.id)
     assert(typeof entry === 'object')
     assert(entry.foo === 'bar')
@@ -17,6 +17,6 @@ describe('Database `update()` function', () => {
   })
 
   it('should do nothing when trying to update a non-existing entry', () => {
-    assert(typeof db.update(42, { baz: 'qux'}) === 'undefined')
+    assert(typeof db.update(42, { baz: 'qux' }) === 'undefined')
   })
 })
