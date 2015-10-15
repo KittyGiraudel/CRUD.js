@@ -95,6 +95,22 @@ If you want to delete a collection of entries based on asearch, you can pass an 
 db.delete({ job: dev })
 ```
 
+### Dropping all entries
+
+To remove all existing entries, you can drop the database which basically resets everything to its initial state:
+
+```js
+db.drop()
+```
+
+### Counting existing entries
+
+You can use the `count(..)` method to count the number of existing entries:
+
+```js
+db.count()
+```
+
 ## Development
 
 ```
