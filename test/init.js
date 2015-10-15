@@ -13,4 +13,19 @@ describe('Database initialisation', () => {
     assert(db._id === 0)
     assert(db._data.length === 0)
   })
+
+  it('should grab existing entries from storage if any', () => {
+    let a = { foo: 'bar' }
+
+    db.insert(a)
+    db.insert(a)
+    db.insert(a)
+    db.insert(a)
+    db.insert(a)
+
+    db = new Database()
+
+    assert(db.count() === 5)
+    assert(db._id === 5)
+  })
 })
