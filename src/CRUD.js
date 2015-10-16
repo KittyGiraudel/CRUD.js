@@ -1,335 +1,308 @@
-/**
- * Represents a database
- * @constructor
- * @param {Object} conf - the options to pass to the constructor
- */
-var Database = function ( conf ) {
-  this.conf = extend({
-    name: 'database',
-    indexedKeys: [],
-    uniqueKey: 'id',
-    driver: new Database.drivers.StorageDriver({
-      name: conf.name,
-      storage: exports.localStorage
-    })
-  }, conf || {});
+import intersect from 'intersect'
+import isObject from 'is-object'
+import storage from './storage.js'
+import StorageDriver from './StorageDriver.js'
 
-  this.initialize();
-};
+class Database {
 
-/**
- * Initialization method
- * @private
- */
-Database.prototype.initialize = function () {
-  this.data = this.load() || [];
-  this.id = 0;
-  if (this.data.length > 0) {
-    this.data = this.data.map(function(e) { return parseInt(e, 10); });
-    this.id = Math.max.apply(Math, this.data);
-  }
-};
+  /**
+   * Represents a database
+   * @constructor
+   * @param {Object} conf - the options to pass to the constructor
+   */
+  constructor (conf = {}) {
+    this.conf = Object.assign({
+      // Name of the database
+      name: 'database',
+      // Indexed keys used for speed search
+      indexedKeys: [],
+      // Auto-generated unique key added to all entries
+      uniqueKey: 'id',
+      // Verbose mode
+      verbose: false,
+      // Driver used for storage
+      driver: new StorageDriver({
+        name: conf.name,
+        storage: storage
+      })
+    }, conf)
 
-/**
- * Finding entries
- * @param   {Object} obj - the object of properties/values to look for
- * @returns {Array}      - collection of items matching the search
- */
-Database.prototype.find = function ( obj ) {
-  if (typeof obj === 'undefined') {
-    return this.findAll();
+    this._initialize()
   }
 
-  var keys = this.getKeys(obj),
-      filtered = [],
-      collection;
-
-  for (var property in keys[0]) {
-    filtered.push(this.conf.driver.getItem(property + ':' + keys[0][property]) || false);
+  /**
+   * Initialization method
+   * @private
+   */
+  _initialize () {
+    // Load existing entries
+    this.data = this._load()
+    // Set internal id
+    this.id = Math.max(...this.data, 0)
   }
 
-  if (filtered.length === 0) {
-    collection = this.data;
-  } else if (filtered.length === 1) {
-    collection = filtered[0];
-  } else {
-    collection = intersect.apply(this, filtered);
+  /**
+   * Finding entries
+   * @param   {Object} obj - the object of properties/values to look for
+   * @returns {Array}      - collection of items matching the search
+   */
+  find (obj = {}) {
+    // Grab the indexed and unindexed keys from search object
+    let keys = {
+      indexed: {},
+      unindexed: {}
+    }
+
+    for (let property in obj) {
+      let stack = this.conf.indexedKeys.includes(property) ? 'indexed' : 'unindexed'
+      keys[stack][property] = obj[property]
+    }
+
+    // Speed search results
+    let results = Object.keys(keys.indexed).map(prop =>
+      this.conf.driver.getItem(prop + ':' + keys.indexed[prop])
+    )
+
+    let collection = !results.length
+      ? this.data
+      : results.length === 1
+        ? results
+        : intersect(...results)
+
+    // Filtering by unindexed keys
+    return collection
+      .map(this.conf.driver.getItem, this.conf.driver)
+      .filter(entry =>
+        Object.keys(keys.unindexed)
+          .every(key => entry[key] === keys.unindexed[key])
+      )
   }
 
-  // Filtering by unindexed keys
-  return this.filter(this.select(collection), keys[1]);
-};
+  /**
+   * Inserting an entry
+   * @param   {Array|Object} arg - entry or array of entries to insert
+   * @returns {Number}           - unique key of the document
+   */
+  insert (arg) {
+    // Go recursive if it is an array, inserting several entries at once
+    if (Array.isArray(arg)) {
+      return arg.forEach(this.insert, this)
+    }
 
-/**
- * Returning all entries from database
- * @returns {Array} - collection of entries
- */
-Database.prototype.findAll = function () {
-  return this.select(this.data);
-};
+    // If it is not an object, throw an error as it is not storable
+    if (!isObject(arg)) {
+      throw new Error(`Can’t insert ${arg}. Please insert object.`)
+    }
 
-/**
- * Dissociate indexed from unindexed keys from an object
- * @param   {Object} obj - object to parse
- * @returns {Array}      - array of indexed keys and unindexed keys
- */
-Database.prototype.getKeys = function ( obj ) {
-  var index, keys = [];
-  keys[0] = {}; // indexed properties
-  keys[1] = {}; // unindexed properties
+    // Bump up unique key
+    this.id++
 
-  for(var property in obj) {
-    index = this.conf.indexedKeys.indexOf(property) !== -1 ? 0 : 1;
-    keys[index][property] = obj[property];
+    // If it exists already (shouldn’t), abort
+    if (this.data.includes(this.id)) {
+      return this._log(`Existing entry for ${this.id}. Aborting.`)
+    }
+
+    // Clone object and assign it unique key
+    let entry = this._addUniqueKey(arg, this.id)
+
+    // Push object to data storage
+    this.data.push(this.id)
+    this.conf.driver.setItem(this.id, entry)
+    this.conf.driver.setItem('__data', this.data.join(','))
+
+    // Rebuild index if necessary
+    this._buildIndex(entry)
+
+    // Return newly generated unique key
+    return this.id
   }
 
-  return keys;
-};
+  /**
+   * Updating an entry
+   * @param   {Number} id  - unique key of the document to update
+   * @param   {Object} obj - new entry
+   * @returns {Object}     - object (obj)
+   */
+  update (id, obj) {
+    // If there is an existing entry for `id`
+    if (this.data.includes(id)) {
+      // Clone object and assign it unique key
+      let entry = this._addUniqueKey(obj, id)
 
-/**
- * Retrieve entries from unique keys
- * @param   {Array} collection - array of unique keys
- * @returns {Array}            - array of entries
- */
-Database.prototype.select = function ( collection ) {
-  var data = [];
-  collection = collection.length === 1 ? [collection] : collection;
+      // First destroy existing index for object
+      this._destroyIndex(id)
+      // Override object to data storage
+      this.conf.driver.setItem(id, obj)
+      // Rebuild index if necessary
+      this._buildIndex(obj)
 
-  for (var i = 0, len = collection.length; i < len; i++) {
-    data.push(this.conf.driver.getItem(collection[i]));
+      // Return new object
+      return entry
+    }
+
+    this._log(`No entry found for ${id}.`)
   }
 
-  return data;
-};
+  /**
+   * Deleting an entry
+   * @param  {Number|Object} arg - unique ID or object to look for before deleting matching entries
+   * @returns {Boolean}          - operation status
+   */
+  delete (arg) {
+    // If passing an object, search and destroy
+    if (isObject(arg)) {
+      return this._findAndDelete(arg)
+    // If passing an id, destroy id
+    } else if (this.data.includes(arg)) {
+      // Remove id from storage
+      this.data.splice(this.data.indexOf(arg), 1)
+      // Remove entry from storage
+      this.conf.driver.removeItem(arg)
+      this.conf.driver.setItem('__data', this.data.join(','))
+      // Destroy index for given id
+      this._destroyIndex(arg)
 
-/**
- * Filtering a collection of entries based on unindexed keys
- * @private
- * @param   {Array}  collection    - array of entries to search for
- * @param   {Object} unindexedKeys - object of unindexed keys
- * @returns {Array}                - array of entries
- */
-Database.prototype.filter = function ( collection, unindexedKeys ) {
-  var okay, entry, data = [];
+      // Return wether it went well
+      return !this.data.includes(arg)
+    }
 
-  for (var i = 0, len = collection.length; i < len; i++) {
-    entry = collection[i];
-    okay = true;
+    this._log(`No entry found for ${arg}.`)
+  }
 
-    for (var property in unindexedKeys) {
-      if (entry[property] !== unindexedKeys[property]) {
-        okay = false;
-        break;
+  /**
+   * Counting number of entries
+   * @returns {Number} - number of entries
+   */
+  count () {
+    return this.data.length
+  }
+
+  /**
+   * Dropping the database
+   * @returns {Boolean} - operation status
+   */
+  drop () {
+    // Remove all the entries from storage
+    this.data.forEach(this.delete, this)
+    // Remove the storage key altogether
+    this.conf.driver.removeItem('__data')
+    // Reset the length of data to 0
+    this.data.length = 0
+
+    return !this.data.length
+  }
+
+  /**
+   * Clone given object and add id as unique key to it
+   * @param {Object} obj - the object to add unique key to
+   * @param {Number} id  - id to add as unique key to object
+   * @returns {Object} - Cloned object with extra unique key
+   */
+  _addUniqueKey (obj, id) {
+    return Object.assign({}, obj, { [this.conf.uniqueKey]: id })
+  }
+
+  /**
+   * Find and delete
+   * @private
+   * @param   {Object}  obj - the object of properties/values to look for
+   * @returns {Boolean}     - operation status
+   */
+  _findAndDelete (obj) {
+    const length = this.data.length
+
+    this.find(obj).forEach(entry => this.delete(entry[this.conf.uniqueKey]))
+
+    return this.data.length < length
+  }
+
+  /**
+   * Loading entries from driver
+   * @private
+   * @returns {Array} - operation status
+   */
+  _load () {
+    let data = this.conf.driver.getItem('__data')
+
+    return data ? data.split(',').map(Number) : []
+  }
+
+  /**
+   * Building the index for an entry
+   * @private
+   * @param {Object} obj - entry to build index of
+   */
+  _buildIndex (obj) {
+    // For each property of entry
+    for (let property in obj) {
+      // If it is not an indexed key, skip to next key
+      if (!this.conf.indexedKeys.includes(property)) continue
+
+      // Grab the index for the given key
+      let key = property + ':' + obj[property]
+      let index = this.conf.driver.getItem(key)
+
+      // Prepare value in case there is no index yet
+      let value = [ obj[this.conf.uniqueKey] ]
+
+      // If there is already 1 or more indexed values for this, append current
+      if (index) {
+        index.push(obj[this.conf.uniqueKey])
+        value = index
       }
-    }
 
-    if (okay) {
-      data.push(entry);
-    }
-  }
-
-  return data;
-};
-
-/**
- * Inserting an entry
- * @param   {Object} obj - document to insert
- * @returns {Number}     - unique key of the document
- */
-Database.prototype.insert = function ( obj ) {
-  if(Object.prototype.toString.call(obj) !== '[object Object]') {
-    throw 'Can\'t insert ' + obj + '. Please insert object.';
-  }
-  this.id++;
-  if (this.data.indexOf(this.id) === -1) {
-    obj[this.conf.uniqueKey] = this.id;
-    this.data.push(this.id);
-    this.conf.driver.setItem(this.id, obj);
-    this.conf.driver.setItem('__data', this.data.join(','));
-    this.buildIndex(obj);
-    return this.id;
-  }
-};
-
-/**
- * Updating an entry
- * @param   {Number} id  - unique key of the document to update
- * @param   {Object} obj - new entry
- * @returns {Object}     - object (obj)
- */
-Database.prototype.update = function ( id, obj ) {
-  if (this.data.indexOf(id) !== -1) {
-    this.destroyIndex(id); // First destroy existing index for object
-    obj[this.conf.uniqueKey] = id;
-    this.conf.driver.setItem(id, obj); // Override object
-    this.buildIndex(obj); // Rebuild index
-    return obj;
-  }
-};
-
-/**
- * Deleting an entry
- * @param  {Number|Object} arg - unique ID or object to look for before deleting matching entries
- * @returns {Boolean}           - operation status
- */
-Database.prototype.delete = function ( arg ) {
-  // If passing an object, search and destroy
-  if (Object.prototype.toString.call(arg) === '[object Object]') {
-    this.findAndDelete(arg);
-  // If passing an id, destroy id
-  } else {
-    if (this.data.indexOf(arg) !== -1) {
-      this.data.splice(this.data.indexOf(arg), 1);
-      this.destroyIndex(arg);
-      this.conf.driver.removeItem(arg);
-      this.conf.driver.setItem('__data', this.data.join(','));
-      return this.data.indexOf(arg) === -1;
-    }
-  }
-};
-
-/**
- * Find and delete
- * @private
- * @param   {Object}  obj - the object of properties/values to look for
- * @returns {Boolean}     - operation status
- */
-Database.prototype.findAndDelete = function ( obj ) {
-  var id, entries = this.find(obj), length = this.data.length;
-  for(var i = 0; i < entries.length; i++) {
-    id = entries[i][this.conf.uniqueKey];
-    if (this.data.indexOf(id) !== -1) {
-      this.data.splice(this.data.indexOf(id), 1);
-      this.destroyIndex(id);
-      this.conf.driver.removeItem(id);
-      this.conf.driver.setItem('__data', this.data.join(','));
-    }
-  }
-  return this.data.length < length;
-};
-
-/**
- * Counting number of entries
- * @returns {Number} - number of entries
- */
-Database.prototype.count = function () {
-  return this.data.length;
-};
-
-/**
- * Dropping the database
- * @returns {Boolean} - operation status
- */
-Database.prototype.drop = function () {
-  for (var i = 0, len = this.data.length; i < len; i++) {
-    this.delete(this.data[i]);
-  }
-  this.conf.driver.removeItem('__data');
-  this.data.length = 0;
-  return this.data.length === 0;
-};
-
-/**
- * Loading entries from driver
- * @private
- * @returns {Array|null} - operation status
- */
-Database.prototype.load = function () {
-  return this.conf.driver.getItem('__data') ?
-    this.conf.driver.getItem('__data').split(',') :
-    null;
-};
-
-/**
- * Building the index for an entry
- * @private
- * @param {Object} obj - entry to build index of
- */
-Database.prototype.buildIndex = function ( obj ) {
-  var key, index, value;
-  for (var property in obj) {
-    if (this.conf.indexedKeys.indexOf(property) !== -1) {
-      value = [obj[this.conf.uniqueKey]];
-      key = property + ':' + obj[property];
-      index = this.conf.driver.getItem(key);
-      if (index !== null) {
-        index.push(obj[this.conf.uniqueKey]);
-        value = index;
-      }
-      this.conf.driver.setItem(key, value);
-    }
-  }
-};
-
-/**
- * Destroying the index for a entry
- * @private
- * @param  {Number} id - unique key of entry to destroy index for
- */
-Database.prototype.destroyIndex = function ( id ) {
-  var key, index, item = this.conf.driver.getItem(id);
-  if(item === null) {
-    return;
-  }
-
-  for(var property in item) {
-    if(this.conf.indexedKeys.indexOf(property) === -1) {
-      continue;
-    }
-
-    key = property + ':' + item[property];
-    index = this.conf.driver.getItem(key);
-    if (index === null) {
-      continue;
-    }
-
-    index.splice(index.indexOf(id), 1);
-    if(index.length === 0) {
-      this.conf.driver.removeItem(key);
-    } else {
-      this.conf.driver.setItem(key, index);
-    }
-  }
-};
-
-/**
- * Intersecting multiple arrays
- * @param  {Array} arguments - arrays to intersect
- * @return {Array}           - intersection of given array
- */
-var intersect = function () {
-  var i, shortest, nShortest, n, len, ret = [], obj = {}, nOthers;
-  nOthers = arguments.length - 1;
-  nShortest = arguments[0].length;
-  shortest = 0;
-  for (i = 0; i <= nOthers; i++) {
-    n = arguments[i].length;
-    if (n < nShortest) {
-      shortest = i;
-      nShortest = n;
+      // Update (or create) index for key
+      this.conf.driver.setItem(key, value)
     }
   }
 
-  for (i = 0; i <= nOthers; i++) {
-    n = (i === shortest) ? 0 : (i || shortest);
-    len = arguments[n].length;
-    for (var j = 0; j < len; j++) {
-      var elem = arguments[n][j];
-      if (obj[elem] === i - 1) {
-        if (i === nOthers) {
-          ret.push(elem);
-          obj[elem] = 0;
-        } else {
-          obj[elem] = i;
-        }
-      } else if (i === 0) {
-        obj[elem] = 0;
+  /**
+   * Destroying the index for a entry
+   * @private
+   * @param {Number} id - unique key of entry to destroy index for
+   */
+  _destroyIndex (id) {
+    // Grab the entry for the given id
+    const item = this.conf.driver.getItem(id)
+
+    // If there is no entry, there is no index then abort
+    if (!item) return
+
+    // For each property of entry
+    for (let property in item) {
+      // If it is not an indexed key, skip to next key
+      if (!this.conf.indexedKeys.includes(property)) continue
+
+      // Grab the index for the given key
+      let key = property + ':' + item[property]
+      let index = this.conf.driver.getItem(key)
+
+      // If there is no index, skip to next key
+      if (!index) continue
+
+      // Remove the entry id from the current index
+      index.splice(index.indexOf(id), 1)
+
+      // If the index is now empty, remove it from storage
+      if (!index.length) {
+        this.conf.driver.removeItem(key)
+      // Else, update it in storage
+      } else {
+        this.conf.driver.setItem(key, index)
       }
     }
   }
-  return ret;
-};
 
-exports.Database = Database;
-exports.Database.drivers = {};
+  /**
+   * Internal logging helper
+   * @param  {String} message - message to display
+   */
+  _log (message) {
+    if (this.conf.verbose && console) {
+      console.log(message)
+    }
+  }
 
+}
+
+export default Database

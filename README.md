@@ -1,4 +1,4 @@
-## A CRUD JavaScript Class
+# A CRUD JavaScript Class
 
 > Read [introduction article](davidwalsh.name/crud-javascript-class) on David Walsh's blog.
 
@@ -10,9 +10,9 @@ Here is a [CRUD](http://en.wikipedia.org/wiki/Create,_read,_update_and_delete) J
 
 ## What is the driver?
 
-The driver (the thing that actually does the storage) has been externalized from the main class in order to allow you to use the driver you want: `sessionStorage`, `localStorage`, `Redis`... Anything you want as long as it relies on `key/value` pairs and supports 3 methods: `setItem`, `getItem`, `removeItem`.
+The driver (the thing that actually does the storage) has been externalized from the main class in order to allow you to use the driver you want: `sessionStorage`, `localStorage`, `Redis`... Anything you want as long as it relies on `key/value` pairs and supports 3 methods: `setItem(..)`, `getItem(..)`, `removeItem(..)`.
 
-The one used per default is a `StorageDriver`, relying on either `localStorage` or `sessionStorage`, depending on what you pass to the constructor, but you could definitely build your own.
+The one used per default is a `StorageDriver`, relying on either `localStorage` or `sessionStorage` (in the client or a dummy replication of itself when used on Node), depending on what you pass to the constructor, but you could definitely build your own.
 
 ## How does it work?
 
@@ -32,12 +32,14 @@ var db = new Database({
 ``` js
 var obj = {
   name: 'Hugo',
-  age: 22,
+  age: 23,
   job: 'dev'
 }
 
 var id = db.insert(obj)
 ```
+
+*Note: you can pass an array to the `insert(..)` method to add several entries at once.*
 
 ### Updating an entry
 
@@ -64,7 +66,7 @@ for(i = 0, len = devs.length; i < len; i++) {
 
 ### Retrieving entries
 
-The `find` method requires an object to parse and search with.
+The `find(..)` method requires an object to parse and search with.
 
 ``` js
 db.find({ mood: 'happy' })
@@ -73,13 +75,7 @@ db.find({ job: 'dev', age: 22 })
 
 ### Retrieving all entries
 
-You can either call the `findAll` method which returns all existing values in the database:
-
-``` js
-db.findAll()
-```
-
-Or you can call the `find` method with no arguments, which basically does the same thing:
+To return all existing entries, you can call the `find(..)` method with no arguments:
 
 ``` js
 db.find()
@@ -99,8 +95,34 @@ If you want to delete a collection of entries based on asearch, you can pass an 
 db.delete({ job: dev })
 ```
 
-## To do
+### Dropping all entries
 
-- [x] Improve the way I deal with `drop`
-- [ ] Add `limit`, `sort` and other cool operations.
-- [ ] I'd like to do something like MongoDB for the update. Not great for now.
+To remove all existing entries, you can drop the database which basically resets everything to its initial state:
+
+```js
+db.drop()
+```
+
+### Counting existing entries
+
+You can use the `count(..)` method to count the number of existing entries:
+
+```js
+db.count()
+```
+
+## Development
+
+```
+# Installing dependencies
+npm install
+
+# Linting the code
+npm run lint
+
+# Running the tests
+npm run test --silent
+
+# Building the dist file
+npm run build
+```
