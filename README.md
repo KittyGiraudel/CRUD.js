@@ -1,6 +1,6 @@
 # A CRUD JavaScript Class
 
-> Read [introduction article](davidwalsh.name/crud-javascript-class) on David Walsh's blog.
+> Read [introduction article](http://davidwalsh.name/crud-javascript-class) on David Walsh's blog.
 
 Here is a [CRUD](http://en.wikipedia.org/wiki/Create,_read,_update_and_delete) JavaScript class mapping to the storage driver of your choice ([localStorage](https://developer.mozilla.org/en-US/docs/Web/Guide/API/DOM/Storage) in this demo). Before going any further, a couple of things you should note:
 
