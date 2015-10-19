@@ -1,0 +1,44 @@
+[
+  {
+    "firstName": "Hugo",
+    "lastName": "Giraudel",
+    "age": 23,
+    "job": "Developer"
+  },
+  {
+    "firstName": "Mike",
+    "lastName": "Smart",
+    "age": 29,
+    "job": "Product Owner"
+  },
+  {
+    "firstName": "Andrea",
+    "lastName": "Franke",
+    "age": 31,
+    "job": "Scrum Master"
+  },
+  {
+    "firstName": "Eric",
+    "lastName": "Schaefer",
+    "age": 32,
+    "job": "Developer"
+  },
+  {
+    "firstName": "Niall",
+    "lastName": "Burkley",
+    "age": 33,
+    "job": "Developer"
+  },
+  {
+    "firstName": "Christoph",
+    "lastName": "Rauscher",
+    "age": 23,
+    "job": "Designer"
+  },
+  {
+    "firstName": "Paul",
+    "lastName": "Goetz",
+    "age": 24,
+    "job": "Developer"
+  }
+]

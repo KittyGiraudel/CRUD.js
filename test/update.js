@@ -1,8 +1,9 @@
 /* global describe, it */
-import { assert } from 'chai'
+import assert from 'assert'
 import Database from '../src/CRUD.js'
 
 let db = new Database()
+db.drop()
 
 describe('Database `update()` function', () => {
   it('should update an existing entry from given id and object', () => {

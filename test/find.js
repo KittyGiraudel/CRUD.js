@@ -1,8 +1,9 @@
 /* global describe, it */
-import { assert } from 'chai'
+import assert from 'assert'
 import Database from '../src/CRUD.js'
 
 let db = new Database()
+db.drop()
 
 describe('Database `find()` function', () => {
   it('should return an existing entries matching given object', () => {

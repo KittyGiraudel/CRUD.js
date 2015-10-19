@@ -22,7 +22,7 @@ class Database {
       verbose: false,
       // Driver used for storage
       driver: new StorageDriver({
-        name: conf.name,
+        name: conf.name || 'database',
         storage: storage
       })
     }, conf)
@@ -63,6 +63,7 @@ class Database {
       this.conf.driver.getItem(prop + ':' + keys.indexed[prop])
     )
 
+
     let collection = !results.length
       ? this.data
       : results.length === 1
@@ -70,12 +71,15 @@ class Database {
         : intersect(...results)
 
     // Filtering by unindexed keys
+    // console.log(collection.map(this.conf.driver.getItem, this.conf.driver))
     return collection
       .map(this.conf.driver.getItem, this.conf.driver)
-      .filter(entry =>
-        Object.keys(keys.unindexed)
-          .every(key => entry[key] === keys.unindexed[key])
-      )
+      .filter(entry => {
+        return Object.keys(keys.unindexed).every(key => {
+       //   console.log(keys.unindexed, entry, key)
+          return entry[key] === keys.unindexed[key]
+        })
+      })
   }
 
   /**
@@ -188,6 +192,8 @@ class Database {
     this.conf.driver.removeItem('__data')
     // Reset the length of data to 0
     this.data.length = 0
+    // Reset internal id
+    this.id = 0
 
     return !this.data.length
   }
@@ -211,7 +217,9 @@ class Database {
   _findAndDelete (obj) {
     const length = this.data.length
 
-    this.find(obj).forEach(entry => this.delete(entry[this.conf.uniqueKey]))
+    this.find(obj).forEach(entry => {
+      return this.delete(entry[this.conf.uniqueKey])
+    })
 
     return this.data.length < length
   }
