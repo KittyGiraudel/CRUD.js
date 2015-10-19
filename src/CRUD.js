@@ -71,15 +71,9 @@ class Database {
         : intersect(...results)
 
     // Filtering by unindexed keys
-    // console.log(collection.map(this.conf.driver.getItem, this.conf.driver))
     return collection
       .map(this.conf.driver.getItem, this.conf.driver)
-      .filter(entry => {
-        return Object.keys(keys.unindexed).every(key => {
-       //   console.log(keys.unindexed, entry, key)
-          return entry[key] === keys.unindexed[key]
-        })
-      })
+      .filter(entry => Object.keys(keys.unindexed).every(key => entry[key] === keys.unindexed[key]))
   }
 
   /**
