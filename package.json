@@ -16,7 +16,7 @@
     "uglify-js": "^2.5.0"
   },
   "scripts": {
-    "build": "browserify src/CRUD.js -t [ babelify --stage 0 ] | tee dist/CRUD.js | uglifyjs --compress --mangle > dist/CRUD.min.js",
+    "build": "browserify src/CRUD.js -t [ babelify --stage 0 ] | tee dist/CRUD.js | uglifyjs --compress > dist/CRUD.min.js",
     "lint": "standard",
     "test": "mocha test --compilers js:babel/register"
   },
