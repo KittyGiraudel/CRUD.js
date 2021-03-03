@@ -7,7 +7,7 @@ let db = new Database()
 db.drop()
 
 // Quick helper
-let searchHugo = () => db.find({ firstName: 'Hugo', lastName: 'Giraudel' })
+let searchKitty = () => db.find({ firstName: 'Kitty', lastName: 'Giraudel' })
 
 describe('Real test feature', () => {
   it('should work', () => {
@@ -19,29 +19,29 @@ describe('Real test feature', () => {
     let developers = db.find({ job: 'Developer' })
     assert(developers.length === 4)
 
-    // Find Hugo
-    let search = searchHugo()
-    let Hugo = search[0]
+    // Find Kitty
+    let search = searchKitty()
+    let Kitty = search[0]
     assert(search.length === 1)
-    assert(search[0].firstName === 'Hugo')
+    assert(search[0].firstName === 'Kitty')
     assert(search[0].lastName === 'Giraudel')
 
-    // Update Hugo
-    let update = db.update(Hugo[db.conf.uniqueKey], Object.assign(Hugo, {
+    // Update Kitty
+    let update = db.update(Kitty[db.conf.uniqueKey], Object.assign(Kitty, {
       job: 'Front-end developer'
     }))
-    assert(update.job === Hugo.job)
+    assert(update.job === Kitty.job)
 
-    // Check Hugo
-    assert(searchHugo()[0].job === 'Front-end developer')
+    // Check Kitty
+    assert(searchKitty()[0].job === 'Front-end developer')
 
-    // Delete Hugo
-    db.delete(Hugo[db.conf.uniqueKey])
-    assert(searchHugo().length === 0)
+    // Delete Kitty
+    db.delete(Kitty[db.conf.uniqueKey])
+    assert(searchKitty().length === 0)
 
-    // Insert Hugo back
-    db.insert(Hugo)
-    search = searchHugo()
+    // Insert Kitty back
+    db.insert(Kitty)
+    search = searchKitty()
     assert(search.length === 1)
     assert(search[0].job === 'Front-end developer')
   })
