@@ -31,7 +31,7 @@ var db = new Database({
 
 ``` js
 var obj = {
-  name: 'Hugo',
+  name: 'Kitty',
   age: 23,
   job: 'dev'
 }
