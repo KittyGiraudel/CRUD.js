@@ -5,7 +5,7 @@
   "main": "dist/CRUD.min.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/HugoGiraudel/CRUD.js.git"
+    "url": "https://github.com/KittyGiraudel/CRUD.js.git"
   },
   "devDependencies": {
     "babel": "^5.8.23",
